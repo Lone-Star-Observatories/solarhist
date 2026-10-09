@@ -423,15 +423,18 @@ function draw(flux, flares, keepView) {
         `<b>${f.cls}</b> peak ${fmt(f.peak)}<br>${hm(f.begin)}–${hm(f.end)} ${f.region ? "AR " + f.region : ""}<extra></extra>`) });
   }
 
+  // Grow the top of the axis for record flares (e.g. 2003-11-04) so peaks and labels aren't clipped.
+  const peaks = flux.b.filter(v => v != null).concat(minMark !== "none" ? flares.map(f => f.flux * 1.6) : []);
+  const yTop = Math.max(-2.6, Math.log10(Math.max(...peaks, 1e-9)) + 0.25);
   const layout = {
     paper_bgcolor: TH().paper, plot_bgcolor: TH().plot, font: { color: TH().font, size: skin === "lcars" ? 13 : 12, family: TH().family },
     margin: { l: 70, r: 40, t: 10, b: 40 }, hovermode: "x", dragmode: "zoom",
     hoverlabel: skin === "lcars" ? { bgcolor: "#000", bordercolor: "#ff9c00", font: { family: TH().family, color: "#ffcc99" } } : {},
     legend: { orientation: "h", x: 0, y: 1.06, bgcolor: "rgba(0,0,0,0)" },
     xaxis: { type: "date", range: [iso(state.start), iso(state.end)], gridcolor: TH().grid, linecolor: TH().axis },
-    yaxis: { type: "log", range: [-9, -2.6], title: { text: skin === "lcars" ? "FLUX (W/m²)" : "Flux (W/m²)" }, gridcolor: TH().grid, exponentformat: "power",
+    yaxis: { type: "log", range: [-9, yTop], title: { text: skin === "lcars" ? "FLUX (W/m²)" : "Flux (W/m²)" }, gridcolor: TH().grid, exponentformat: "power",
       fixedrange: false },
-    yaxis2: { overlaying: "y", side: "right", type: "log", range: [-9, -2.6], showgrid: false, fixedrange: true,
+    yaxis2: { overlaying: "y", side: "right", type: "log", range: [-9, yTop], showgrid: false, fixedrange: true,
       tickvals: CLASSES.map(([, v]) => v * Math.sqrt(10)), ticktext: CLASSES.map(([c]) => c), tickfont: { size: 14, color: TH().classTick } },
     shapes: bandShapes().concat(selShape()),
   };
