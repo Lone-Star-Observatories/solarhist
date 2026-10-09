@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar X-ray History</title>
+<script src="/static/vendor/plotly.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0f17; --panel: #121826; --line: #232c3d; --text: #dce3ee; --muted: #8a96aa;
+  --accent: #ffb547; --b: #ff7a45; --a: #5aa9ff;
+  --cA: #1b2a3a; --cB: #1d3b33; --cC: #3a3a1c; --cM: #46301a; --cX: #4a1c22;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+  padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+h1 span { color: var(--accent); }
+.group { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+label { color: var(--muted); font-size: 12px; }
+input, select, button { background: #0d1320; color: var(--text); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; }
+input[type=datetime-local] { color-scheme: dark; }
+button { cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+main { padding: 12px 16px 40px; max-width: 1600px; margin: 0 auto; }
+#status { color: var(--muted); font-size: 12px; min-height: 18px; margin: 2px 0 8px; display: flex; gap: 14px; flex-wrap: wrap; }
+#status .busy { color: var(--accent); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; margin-bottom: 12px; }
+#chart { height: 62vh; min-height: 380px; }
+#daily { height: 220px; }
+.row { display: grid; grid-template-columns: 280px 1fr; gap: 12px; }
+@media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 6px; }
+.stat { background: #0d1320; border-radius: 8px; padding: 10px; text-align: center; }
+.stat b { display: block; font-size: 24px; }
+.stat.X b { color: #ff5468; } .stat.M b { color: #ff9a3c; } .stat.C b { color: #e8d55a; }
+.big { padding: 6px 10px 10px; color: var(--muted); font-size: 13px; }
+.big strong { color: var(--text); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--panel); cursor: pointer; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: #18213a; }
+.tbl { max-height: 420px; overflow: auto; }
+.cls { font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+.cls.X { background: #5c1520; color: #ff8593; } .cls.M { background: #4d2c10; color: #ffb36b; }
+.cls.C { background: #3d3812; color: #f0e27a; } .cls.B, .cls.A { background: #1a2a3a; color: #9cc3ff; }
+.hint { color: var(--muted); font-size: 12px; padding: 4px 8px; }
+h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+
+#imgcard .bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 4px 8px 8px; }
+#imgcard .bar h2 { margin: 0; }
+#selTime { font-weight: 650; color: var(--accent); font-variant-numeric: tabular-nums; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; }
+.chip.off { opacity: .45; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; padding: 4px 8px 8px; }
+.tile { background: #05070c; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; cursor: zoom-in; position: relative; }
+.tile:hover { border-color: var(--accent); }
+.tile img { width: 100%; aspect-ratio: 1; display: block; background: #05070c; }
+.tile .cap { display: flex; justify-content: space-between; gap: 6px; padding: 5px 7px; font-size: 12px; }
+.tile .cap span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+.tile.far .cap span:last-child { color: #e0a24a; }
+.grp { grid-column: 1 / -1; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; margin-top: 4px; }
+#lightbox { position: fixed; inset: 0; background: rgba(3,5,10,.92); z-index: 50; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px; padding: 16px; }
+#lightbox.open { display: flex; }
+#lightbox img { max-width: min(92vw, 1024px); max-height: calc(100vh - 140px); aspect-ratio: 1; border-radius: 8px; background: #000; }
+#lightbox .lbbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+#lbTitle { font-weight: 650; } #lbTime { color: var(--muted); font-variant-numeric: tabular-nums; }
+#lightbox a { color: var(--a); }
+
+/* =====================================================================  LCARS skin  */
+.lc { display: none; }
+:root[data-skin=lcars] {
+  --lc-orange: #ff9c00; --lc-peach: #ffcc99; --lc-lilac: #cc99cc; --lc-blue: #9999ff; --lc-sky: #99ccff;
+  --lc-red: #cc6666; --lc-gold: #ffcc66; --lc-tan: #cc9966;
+  --bg: #000; --panel: #000; --line: #26263a; --text: #ffcc99; --muted: #9999ff; --accent: #ff9c00;
+}
+:root[data-skin=lcars] body {
+  font-family: Antonio, "Arial Narrow", "Helvetica Neue Condensed", sans-serif; font-size: 15px; letter-spacing: .4px;
+  text-transform: uppercase; display: grid; grid-template-columns: 172px minmax(0, 1fr); grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+:root[data-skin=lcars] .lc { display: block; }
+.lc-tl { grid-row: 1; grid-column: 1; background: var(--lc-lilac); border-top-left-radius: 90px; margin: 8px 0 0 8px; }
+#lcSide { grid-row: 2; grid-column: 1; display: none; flex-direction: column; gap: 5px; margin: 5px 0 8px 8px; }
+:root[data-skin=lcars] #lcSide { display: flex; }
+#lcSide > * { color: #000; }
+.lc-read { padding: 6px 10px 5px; text-align: right; line-height: 1.05; min-height: 44px; display: flex; flex-direction: column; justify-content: flex-end; }
+.lc-read small { font-size: 11px; opacity: .75; } .lc-read b { font-size: 19px; font-weight: 600; }
+.lc-fill { flex: 1; background: var(--lc-blue); min-height: 30px; }
+.lc-bl { height: 90px; background: var(--lc-blue); border-bottom-left-radius: 90px; }
+#lcSlot { display: flex; flex-direction: column; gap: 5px; }
+:root[data-skin=lcars] #presets { flex-direction: column; flex-wrap: nowrap; gap: 5px; }
+:root[data-skin=lcars] #presets button, .lc-btn {
+  width: 100%; height: 38px; border-radius: 0; border: 0; text-align: right; padding: 0 10px 4px;
+  display: flex; align-items: flex-end; justify-content: flex-end; color: #000; font-size: 17px; font-weight: 600;
+}
+:root[data-skin=lcars] #presets button:nth-child(4n+1) { background: var(--lc-orange); }
+:root[data-skin=lcars] #presets button:nth-child(4n+2) { background: var(--lc-peach); }
+:root[data-skin=lcars] #presets button:nth-child(4n+3) { background: var(--lc-tan); }
+:root[data-skin=lcars] #presets button:nth-child(4n+4) { background: var(--lc-gold); }
+:root[data-skin=lcars] #presets button:hover, .lc-btn:hover { filter: brightness(1.25); }
+.lc-btn { background: var(--lc-red); cursor: pointer; font-family: inherit; text-transform: uppercase; }
+.lc-btn.on { background: var(--lc-gold); }
+
+:root[data-skin=lcars] header {
+  grid-row: 1; grid-column: 2; position: relative; background: #000; border: 0; margin-top: 8px;
+  padding: 44px 16px 16px 26px; gap: 12px 18px; z-index: 1;
+}
+:root[data-skin=lcars] header::before {    /* top bar, segmented */
+  content: ""; position: absolute; left: 0; right: 8px; top: 0; height: 28px; border-radius: 0 14px 14px 0;
+  background: linear-gradient(90deg, var(--lc-lilac) 0 46%, #000 46% calc(46% + 6px), var(--lc-orange) calc(46% + 6px) 58%,
+    #000 58% calc(58% + 6px), var(--lc-peach) calc(58% + 6px) 100%);
+}
+:root[data-skin=lcars] header::after {     /* inner curve of the elbow */
+  content: ""; position: absolute; left: 0; top: 28px; width: 40px; height: 40px;
+  background: radial-gradient(circle at 100% 100%, transparent 39.5px, var(--lc-lilac) 40px);
+}
+:root[data-skin=lcars] h1 {
+  position: absolute; right: 50px; top: -6px; background: #000; padding: 0 12px; z-index: 2;
+  font-size: 36px; line-height: 40px; font-weight: 600; color: var(--lc-orange); letter-spacing: 1px;
+}
+:root[data-skin=lcars] h1 span { color: var(--lc-peach); }
+:root[data-skin=lcars] label { color: var(--lc-blue); font-size: 14px; }
+:root[data-skin=lcars] input, :root[data-skin=lcars] select {
+  background: #000; color: var(--lc-peach); border: 2px solid var(--lc-blue); border-radius: 999px; padding: 4px 12px;
+  font-family: inherit; font-size: 14px; text-transform: uppercase;
+}
+:root[data-skin=lcars] input[type=checkbox] { accent-color: var(--lc-orange); }
+:root[data-skin=lcars] button {
+  border: 0; border-radius: 999px; padding: 6px 16px; color: #000; background: var(--lc-peach);
+  font-family: inherit; font-size: 15px; font-weight: 600; text-transform: uppercase;
+}
+:root[data-skin=lcars] button:hover { filter: brightness(1.2); }
+:root[data-skin=lcars] #go { background: var(--lc-orange); }
+:root[data-skin=lcars] #csv { background: var(--lc-sky); }
+:root[data-skin=lcars] #skinBtn { background: var(--lc-red); }
+:root[data-skin=lcars] #peakBtn { background: var(--lc-gold); }
+:root[data-skin=lcars] [data-step] { background: var(--lc-lilac); }
+:root[data-skin=lcars] .chip { background: var(--lc-blue); font-size: 13px; padding: 3px 12px; }
+:root[data-skin=lcars] .chip.off { background: #33334d; color: #8888aa; opacity: 1; }
+
+:root[data-skin=lcars] main { grid-row: 2; grid-column: 2; max-width: none; margin: 0; padding: 8px 8px 8px 0; display: flex; flex-direction: column; }
+:root[data-skin=lcars] main > :not(.lc-foot) { margin-left: 26px; }
+.lc-foot { margin-top: auto !important; height: 28px; position: relative; border-radius: 0 14px 14px 0;
+  background: linear-gradient(90deg, var(--lc-blue) 0 30%, #000 30% calc(30% + 6px), var(--lc-red) calc(30% + 6px) 36%,
+    #000 36% calc(36% + 6px), var(--lc-blue) calc(36% + 6px) 100%); }
+:root[data-skin=lcars] .lc-foot { display: block; }
+.lc-foot::before { content: ""; position: absolute; left: 0; top: -40px; width: 40px; height: 40px;
+  background: radial-gradient(circle at 100% 0%, transparent 39.5px, var(--lc-blue) 40px); }
+.lc-foot span { position: absolute; right: 40px; top: -3px; background: #000; padding: 0 10px; color: var(--lc-blue); font-size: 22px; line-height: 32px; }
+
+:root[data-skin=lcars] #status { margin-left: 26px; color: var(--lc-blue); font-size: 14px; gap: 22px; }
+:root[data-skin=lcars] #status .busy { color: var(--lc-gold); animation: lcblink 1s steps(2) infinite; }
+@keyframes lcblink { 50% { opacity: .35; } }
+:root[data-skin=lcars] .card {
+  background: #000; border: 0; border-left: 16px solid var(--lc-blue); border-radius: 26px 0 0 26px;
+  padding: 8px 6px 8px 14px; margin-bottom: 14px;
+}
+:root[data-skin=lcars] .card:has(#chart) { border-left-color: var(--lc-lilac); }
+:root[data-skin=lcars] #imgcard { border-left-color: var(--lc-sky); }
+:root[data-skin=lcars] .row .card:first-child { border-left-color: var(--lc-orange); }
+:root[data-skin=lcars] .row .card:last-child { border-left-color: var(--lc-peach); }
+:root[data-skin=lcars] .card:has(#daily) { border-left-color: var(--lc-gold); }
+:root[data-skin=lcars] h2 {
+  display: flex; align-items: center; gap: 8px; color: var(--lc-orange); font-size: 20px; font-weight: 600;
+  letter-spacing: 1px; margin: 2px 4px 10px 0; flex: 1 1 auto;
+}
+:root[data-skin=lcars] h2::after { content: ""; flex: 1; height: 14px; min-width: 30px; background: var(--lc-orange); border-radius: 0 7px 7px 0; }
+:root[data-skin=lcars] #imgcard h2 { flex: 0 0 auto; }
+:root[data-skin=lcars] #imgcard h2::after { width: 60px; flex: 0 0 60px; background: var(--lc-sky); }
+:root[data-skin=lcars] #imgcard h2 { color: var(--lc-sky); }
+:root[data-skin=lcars] #selTime { color: var(--lc-gold); font-size: 20px; }
+:root[data-skin=lcars] .stat { background: #000; border: 2px solid var(--lc-blue); border-radius: 0 20px 0 20px; }
+:root[data-skin=lcars] .stat b { font-size: 34px; font-weight: 600; }
+:root[data-skin=lcars] .stat.X b { color: #ff5555; } :root[data-skin=lcars] .stat.M b { color: var(--lc-orange); }
+:root[data-skin=lcars] .stat.C b { color: var(--lc-gold); }
+:root[data-skin=lcars] .big strong { color: var(--lc-orange); font-size: 18px; }
+:root[data-skin=lcars] th { color: var(--lc-blue); background: #000; font-size: 14px; }
+:root[data-skin=lcars] td { color: var(--lc-peach); border-bottom-color: #1a1a2a; }
+:root[data-skin=lcars] tbody tr:hover { background: #1a1a33; }
+:root[data-skin=lcars] .cls { color: #000 !important; border-radius: 999px; padding: 1px 10px; }
+:root[data-skin=lcars] .cls.X { background: var(--lc-red); } :root[data-skin=lcars] .cls.M { background: var(--lc-orange); }
+:root[data-skin=lcars] .cls.C { background: var(--lc-gold); } :root[data-skin=lcars] .cls.B, :root[data-skin=lcars] .cls.A { background: var(--lc-blue); }
+:root[data-skin=lcars] .hint { color: #7777bb; }
+:root[data-skin=lcars] .grp { color: var(--lc-lilac); font-size: 14px; }
+:root[data-skin=lcars] .tile { background: #000; border: 0; border-radius: 0 0 0 18px; }
+:root[data-skin=lcars] .tile img { background: #000; }
+:root[data-skin=lcars] .tile .cap { background: var(--lc-blue); color: #000; font-weight: 600; font-size: 13px; padding: 3px 10px; }
+:root[data-skin=lcars] .tile .cap span:last-child { color: #000; }
+:root[data-skin=lcars] .tile.far .cap { background: var(--lc-tan); }
+:root[data-skin=lcars] .tile:hover .cap { background: var(--lc-orange); }
+:root[data-skin=lcars] #lightbox { background: #000; }
+:root[data-skin=lcars] #lightbox img { border-radius: 0; border: 3px solid var(--lc-lilac); }
+:root[data-skin=lcars] #lbTitle { color: var(--lc-orange); font-size: 26px; }
+:root[data-skin=lcars] #lbTime { color: var(--lc-blue); font-size: 18px; }
+:root[data-skin=lcars] #lightbox a { color: var(--lc-sky); }
+:root[data-skin=lcars] .tbl::-webkit-scrollbar { width: 10px; } :root[data-skin=lcars] .tbl::-webkit-scrollbar-thumb { background: var(--lc-peach); border-radius: 5px; }
+@media (max-width: 760px) {
+  :root[data-skin=lcars] body { grid-template-columns: 92px minmax(0, 1fr); }
+  :root[data-skin=lcars] h1 { font-size: 22px; right: 20px; }
+  :root[data-skin=lcars] #presets button, .lc-btn { font-size: 14px; }
+  .lc-read b { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+<div class="lc lc-tl"></div>
+<aside id="lcSide">
+  <div id="lcSlot"></div>
+  <div class="lc-read" style="background:var(--lc-peach)"><small>STARDATE</small><b id="lcDate">—</b></div>
+  <div class="lc-read" style="background:var(--lc-orange)"><small>SENSOR</small><b id="lcSat">—</b></div>
+  <div class="lc-read" style="background:var(--lc-lilac)"><small>PEAK FLUX</small><b id="lcPeak">—</b></div>
+  <div class="lc-read" style="background:var(--lc-gold)"><small>FLARES X·M·C</small><b id="lcCount">—</b></div>
+  <button class="lc-btn" id="lcAudio">AUDIO</button>
+  <div class="lc-fill"></div>
+  <div class="lc-bl"></div>
+</aside>
+<header>
+  <h1>☀︎ <span>GOES</span> Solar X-ray History</h1>
+  <div class="group">
+    <label>From (UTC)</label><input type="datetime-local" id="start">
+    <label>To</label><input type="datetime-local" id="end">
+    <button id="go">Load</button>
+  </div>
+  <div class="group" id="presets">
+    <button data-d="1">1d</button><button data-d="3">3d</button><button data-d="7">7d</button>
+    <button data-d="30">30d</button><button data-d="182">6mo</button><button data-d="365">1y</button>
+    <button data-d="1096">3y</button><button data-d="4018">11y</button><button data-d="all">All</button>
+  </div>
+  <div class="group">
+    <label>Satellite</label>
+    <select id="sat">
+      <option value="auto">Auto (primary)</option>
+      <option>19</option><option>18</option><option>17</option><option>16</option><option>15</option>
+      <option>14</option><option>13</option><option>12</option><option>11</option><option>10</option>
+      <option>9</option><option>8</option>
+    </select>
+    <label><input type="checkbox" id="showA" checked> XRS-A</label>
+    <label>Flare marks</label>
+    <select id="minMark"><option value="X">≥X</option><option value="M" selected>≥M</option><option value="C">≥C</option><option value="none">off</option></select>
+    <button id="csv" title="1-minute data, up to 400 days">CSV</button>
+    <button id="skinBtn" title="Switch interface skin">LCARS</button>
+  </div>
+</header>
+<main>
+  <div id="status"></div>
+  <div class="card"><div id="chart"></div></div>
+  <div class="card" id="imgcard">
+    <div class="bar">
+      <h2>Solar imagery</h2>
+      <span id="selTime">click the chart or a flare</span>
+      <div class="group">
+        <button data-step="-60">−1h</button><button data-step="-10">−10m</button>
+        <button data-step="10">+10m</button><button data-step="60">+1h</button>
+        <button id="peakBtn" title="Jump to the highest X-ray flux in the current view">Peak in view</button>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="grid" id="tiles"><div class="hint">Images come from Helioviewer (SDO, GOES SUVI, SOHO, STEREO, PROBA2, Hinode, GONG, TRACE, Yohkoh, coronagraphs).</div></div>
+  </div>
+  <div class="row">
+    <div class="card">
+      <h2>Flares in range</h2>
+      <div class="stats">
+        <div class="stat X"><b id="nX">–</b>X</div>
+        <div class="stat M"><b id="nM">–</b>M</div>
+        <div class="stat C"><b id="nC">–</b>C</div>
+      </div>
+      <div class="big" id="biggest"></div>
+      <div class="hint">Event lists: SWPC Warehouse FTP (1996 – today). Drag on the chart to zoom; double-click to zoom back out.</div>
+    </div>
+    <div class="card">
+      <h2>Flare list (click to zoom)</h2>
+      <div class="tbl"><table>
+        <thead><tr><th data-k="peak">Peak (UTC)</th><th data-k="flux">Class</th><th>Begin</th><th>End</th><th data-k="region">Region</th><th>Obs</th></tr></thead>
+        <tbody id="flares"></tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="card"><h2>Daily flare counts &amp; F10.7</h2><div id="daily"></div></div>
+  <div class="lc lc-foot"><span>SOLAR OBSERVATION · GOES XRS</span></div>
+</main>
+<div id="lightbox">
+  <div class="lbbar"><span id="lbTitle"></span><span id="lbTime"></span></div>
+  <img id="lbImg" alt="">
+  <div class="lbbar">
+    <button data-lb="-1">◀ prev</button>
+    <button id="lbPlay">▶ play</button>
+    <button data-lb="1">next ▶</button>
+    <label>step</label>
+    <select id="lbStep"><option value="2">2 min</option><option value="6">6 min</option><option value="12" selected>12 min</option><option value="30">30 min</option><option value="60">1 h</option></select>
+    <a id="lbLink" target="_blank" rel="noopener">open in Helioviewer ↗</a>
+    <button id="lbClose">✕ close</button>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const EARLIEST = Date.UTC(1995, 0, 1);
+const CLASSES = [["A",1e-8],["B",1e-7],["C",1e-6],["M",1e-5],["X",1e-4]];
+const THEMES = {
+  std: { paper: "#121826", plot: "#0d1320", font: "#dce3ee", family: undefined, grid: "#1e2738", axis: "#2a3446",
+    band: {A:"#16202d",B:"#15241f",C:"#25230f",M:"#2b1d10",X:"#2e1015"}, classTick: "#8a96aa",
+    b: "#ff7a45", bmin: "rgba(255,122,69,.35)", a: "#5aa9ff", markText: "#ffd9a8",
+    mX: "#ff5468", mM: "#ff9a3c", mC: "#e8d55a", sel: "#ffd166",
+    dC: "#c9b94a", dM: "#ff9a3c", dX: "#ff5468", f107: "#7fd1b9" },
+  lcars: { paper: "#000", plot: "#000", font: "#ff9966", family: "Antonio, 'Arial Narrow', sans-serif", grid: "#1c1c2c", axis: "#9999ff",
+    band: {A:"#07071a",B:"#0a1022",C:"#1a1405",M:"#241000",X:"#2a0606"}, classTick: "#cc99cc",
+    b: "#ff9900", bmin: "rgba(255,153,0,.35)", a: "#99ccff", markText: "#ffcc99",
+    mX: "#ff4444", mM: "#ff9900", mC: "#ffcc66", sel: "#ffcc99",
+    dC: "#ffcc99", dM: "#ff9900", dX: "#cc4444", f107: "#9999ff" },
+};
+let skin = "std";
+const TH = () => THEMES[skin];
+let lastFlux = null, state = { start: null, end: null }, flareRows = [], sortKey = "flux", sortDir = -1, reqId = 0, relayoutTimer = null;
+
+const iso = ms => new Date(ms).toISOString().slice(0, 19);
+const fmt = s => s ? s.replace("T", " ").slice(0, 16) : "—";
+const hm = s => s ? s.slice(11, 16) : "—";
+function fromInput(v) { return v ? Date.parse(v + "Z") : NaN; }
+function toInput(ms) { return new Date(ms).toISOString().slice(0, 16); }
+
+function readUrl() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (p.get("s") && p.get("e")) return [Date.parse(p.get("s") + "Z"), Date.parse(p.get("e") + "Z")];
+  return null;
+}
+function writeUrl() {
+  const p = new URLSearchParams({ s: iso(state.start), e: iso(state.end), sat: $("sat").value });
+  history.replaceState(null, "", "#" + p);
+}
+
+async function getJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+let pollTimer = null;
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(async () => {
+    try {
+      const s = await getJSON("/api/status");
+      if (s.progress.length) setBusy(s.progress.join(" · "));
+    } catch {}
+  }, 700);
+}
+function stopPolling() { clearInterval(pollTimer); pollTimer = null; }
+function setBusy(msg) { $("status").innerHTML = `<span class="busy">⏳ ${msg}</span>`; }
+
+function stepLabel(m) {
+  if (m <= 1) return "1-minute data";
+  if (m < 60) return `${m}-min max per point`;
+  if (m < 1440) return `${(m/60).toFixed(m % 60 ? 1 : 0)}-hour max per point`;
+  return `${(m/1440).toFixed(m % 1440 ? 1 : 0)}-day max per point`;
+}
+
+async function load(start, end, { fromZoom = false } = {}) {
+  start = Math.max(start, EARLIEST); end = Math.min(end, Date.now() + 3600e3);
+  state.start = start; state.end = end;
+  $("start").value = toInput(start); $("end").value = toInput(end);
+  writeUrl();
+  const id = ++reqId, sat = $("sat").value;
+  const q = `start=${iso(start)}&end=${iso(end)}`;
+  const width = $("chart").clientWidth || 1200;
+  setBusy("Loading…"); startPolling();
+  try {
+    const [flux, fl] = await Promise.all([
+      getJSON(`/api/flux?${q}&sat=${sat}&points=${Math.round(width * 1.5)}`),
+      getJSON(`/api/flares?${q}&min_class=C`).catch(e => ({ flares: [], error: e.message })),
+    ]);
+    if (id !== reqId) return;
+    lastFlux = flux;
+    if (sel == null || sel < start || sel > end) { sel = peakTime(flux); selectTime(sel); }
+    draw(flux, fl.flares, fromZoom);
+    flareRows = fl.flares; renderFlares(); renderStats(); updateReadouts();
+    const sats = flux.sats.length ? "GOES-" + flux.sats.join(", GOES-") : "no flux data in this range";
+    $("status").innerHTML = `<span>${sats}</span><span>${stepLabel(flux.step_min)}</span>` +
+      `<span>${flux.t.length.toLocaleString()} points</span>` +
+      (flux.last ? `<span>data through ${fmt(flux.last)} UTC</span>` : "") +
+      (fl.error ? `<span class="busy">events: ${fl.error}</span>` : "");
+    loadDaily(start, end, id);
+  } catch (e) {
+    if (id === reqId) $("status").innerHTML = `<span class="busy">⚠ ${e.message}</span>`;
+  } finally { if (id === reqId) stopPolling(); }
+}
+
+function bandShapes() {
+  const shapes = [];
+  CLASSES.forEach(([c, lo], i) => shapes.push({ type: "rect", xref: "paper", yref: "y", x0: 0, x1: 1,
+    y0: lo, y1: lo * 10, fillcolor: TH().band[c], line: { width: 0 }, layer: "below" }));
+  return shapes;
+}
+
+function draw(flux, flares, keepView) {
+  const t = flux.t.map(iso);   // naive UTC strings → Plotly shows UTC, not local time
+  const traces = [];
+  if (flux.bmin) traces.push({ x: t, y: flux.bmin, name: "XRS-B min", mode: "lines",
+    line: { color: TH().bmin, width: 1 }, hovertemplate: "B min %{y:.2e} W/m²<extra></extra>" });
+  traces.push({ x: t, y: flux.b, name: flux.bmin ? "XRS-B 1–8 Å (max)" : "XRS-B 1–8 Å", mode: "lines",
+    line: { color: TH().b, width: skin === "lcars" ? 1.6 : 1.3 }, hovertemplate: "%{x|%Y-%m-%d %H:%M}<br>B %{y:.2e} W/m²<extra></extra>" });
+  if ($("showA").checked) traces.push({ x: t, y: flux.a, name: "XRS-A 0.5–4 Å", mode: "lines",
+    line: { color: TH().a, width: 1 }, hovertemplate: "A %{y:.2e} W/m²<extra></extra>" });
+
+  const minMark = $("minMark").value;
+  if (minMark !== "none") {
+    const th = { X: 1e-4, M: 1e-5, C: 1e-6 }[minMark];
+    let marks = flares.filter(f => f.flux >= th);
+    if (marks.length > 400) marks = [...marks].sort((a, b) => b.flux - a.flux).slice(0, 400);
+    traces.push({ x: marks.map(f => f.peak), y: marks.map(f => f.flux * 1.6), mode: "text+markers",
+      text: marks.map(f => marks.length <= 60 || f.flux >= 1e-4 ? f.cls : ""), textposition: "top center",
+      textfont: { color: TH().markText, size: 11 }, marker: { symbol: "triangle-down", size: 7,
+        color: marks.map(f => f.flux >= 1e-4 ? TH().mX : f.flux >= 1e-5 ? TH().mM : TH().mC) },
+      name: "Flares (SWPC)", hovertemplate: marks.map(f =>
+        `<b>${f.cls}</b> peak ${fmt(f.peak)}<br>${hm(f.begin)}–${hm(f.end)} ${f.region ? "AR " + f.region : ""}<extra></extra>`) });
+  }
+
+  const layout = {
+    paper_bgcolor: TH().paper, plot_bgcolor: TH().plot, font: { color: TH().font, size: skin === "lcars" ? 13 : 12, family: TH().family },
+    margin: { l: 70, r: 40, t: 10, b: 40 }, hovermode: "x", dragmode: "zoom",
+    hoverlabel: skin === "lcars" ? { bgcolor: "#000", bordercolor: "#ff9c00", font: { family: TH().family, color: "#ffcc99" } } : {},
+    legend: { orientation: "h", x: 0, y: 1.06, bgcolor: "rgba(0,0,0,0)" },
+    xaxis: { type: "date", range: [iso(state.start), iso(state.end)], gridcolor: TH().grid, linecolor: TH().axis },
+    yaxis: { type: "log", range: [-9, -2.6], title: { text: skin === "lcars" ? "FLUX (W/m²)" : "Flux (W/m²)" }, gridcolor: TH().grid, exponentformat: "power",
+      fixedrange: false },
+    yaxis2: { overlaying: "y", side: "right", type: "log", range: [-9, -2.6], showgrid: false, fixedrange: true,
+      tickvals: CLASSES.map(([, v]) => v * Math.sqrt(10)), ticktext: CLASSES.map(([c]) => c), tickfont: { size: 14, color: TH().classTick } },
+    shapes: bandShapes().concat(selShape()),
+  };
+  traces.push({ x: [t[0] || iso(state.start)], y: [1e-9], yaxis: "y2", showlegend: false, hoverinfo: "skip", mode: "markers", marker: { opacity: 0 } });
+  Plotly.react("chart", traces, layout, { displaylogo: false, responsive: true, scrollZoom: false,
+    modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d"] });
+}
+
+function renderStats() {
+  const n = { X: 0, M: 0, C: 0 };
+  let big = null;
+  for (const f of flareRows) { n[f.cls[0]] = (n[f.cls[0]] || 0) + 1; if (!big || f.flux > big.flux) big = f; }
+  $("nX").textContent = n.X; $("nM").textContent = n.M; $("nC").textContent = n.C;
+  $("biggest").innerHTML = big ? `Largest: <strong>${big.cls}</strong> at ${fmt(big.peak)} UTC${big.region ? ` · AR ${big.region}` : ""}` : "No C-class or larger flares listed.";
+}
+
+function renderFlares() {
+  const rows = [...flareRows].sort((a, b) => {
+    const va = a[sortKey] ?? "", vb = b[sortKey] ?? "";
+    return (va > vb ? 1 : va < vb ? -1 : 0) * sortDir;
+  }).slice(0, 1000);
+  $("flares").innerHTML = rows.map(f => `<tr data-p="${f.peak}"><td>${fmt(f.peak)}</td>` +
+    `<td><span class="cls ${f.cls[0]}">${f.cls}</span></td><td>${hm(f.begin)}</td><td>${hm(f.end)}</td>` +
+    `<td>${f.region || ""}</td><td>${f.obs || ""}</td></tr>`).join("") ||
+    `<tr><td colspan="6" class="hint">No flares ≥ C1 in this range.</td></tr>`;
+}
+
+async function loadDaily(start, end, id) {
+  const days = (end - start) / 864e5;
+  if (days < 3) { Plotly.purge("daily"); $("daily").parentElement.style.display = "none"; return; }
+  $("daily").parentElement.style.display = "";
+  try {
+    const d = await getJSON(`/api/daily?start=${iso(start)}&end=${iso(end)}`);
+    if (id !== reqId) return;
+    let { days: x, C, M, X, f107 } = d;
+    // Aggregate to weeks/months when very long so bars stay readable.
+    const bin = x.length > 2000 ? 30 : x.length > 400 ? 7 : 1;
+    if (bin > 1) {
+      const agg = (arr, f) => { const o = []; for (let i = 0; i < arr.length; i += bin) o.push(f(arr.slice(i, i + bin))); return o; };
+      const sum = a => a.reduce((s, v) => s + v, 0);
+      const mean = a => { const v = a.filter(n => n != null); return v.length ? sum(v) / v.length : null; };
+      [C, M, X] = [C, M, X].map(a => agg(a, sum)); f107 = agg(f107, mean); x = agg(x, a => a[0]);
+    }
+    const unit = bin === 1 ? "day" : bin === 7 ? "week" : "30 days";
+    Plotly.react("daily", [
+      { x, y: C, type: "bar", name: `C / ${unit}`, marker: { color: TH().dC } },
+      { x, y: M, type: "bar", name: `M / ${unit}`, marker: { color: TH().dM } },
+      { x, y: X, type: "bar", name: `X / ${unit}`, marker: { color: TH().dX } },
+      { x, y: f107, name: "F10.7 (sfu)", yaxis: "y2", mode: "lines", line: { color: TH().f107, width: 1.5 }, connectgaps: false },
+    ], {
+      barmode: "stack", paper_bgcolor: TH().paper, plot_bgcolor: TH().plot, font: { color: TH().font, size: 11, family: TH().family },
+      margin: { l: 50, r: 50, t: 6, b: 30 }, legend: { orientation: "h", y: 1.15 }, bargap: 0.1,
+      xaxis: { type: "date", gridcolor: TH().grid }, yaxis: { title: "flares", gridcolor: TH().grid },
+      yaxis2: { overlaying: "y", side: "right", title: "F10.7", showgrid: false },
+    }, { displaylogo: false, responsive: true });
+  } catch (e) { /* daily panel is optional */ }
+}
+
+// ---- wiring
+$("go").onclick = () => {
+  const s = fromInput($("start").value), e = fromInput($("end").value);
+  if (isFinite(s) && isFinite(e) && e > s) load(s, e);
+};
+$("presets").onclick = ev => {
+  const d = ev.target.dataset.d; if (!d) return;
+  const end = Date.now();
+  load(d === "all" ? EARLIEST : end - d * 864e5, end);
+};
+$("sat").onchange = () => load(state.start, state.end);
+$("showA").onchange = $("minMark").onchange = () => load(state.start, state.end);
+$("csv").onclick = () => {
+  if (state.end - state.start > 400 * 864e5) { alert("Zoom in to 400 days or less to export 1-minute data."); return; }
+  location.href = `/api/export.csv?start=${iso(state.start)}&end=${iso(state.end)}&sat=${$("sat").value}`;
+};
+$("flares").onclick = ev => {
+  const tr = ev.target.closest("tr[data-p]"); if (!tr) return;
+  const p = Date.parse(tr.dataset.p + "Z");
+  sel = p;
+  load(p - 4 * 3600e3, p + 4 * 3600e3);
+  selectTime(p);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+document.querySelector("thead").onclick = ev => {
+  const k = ev.target.dataset.k; if (!k) return;
+  sortDir = sortKey === k ? -sortDir : -1; sortKey = k; renderFlares();
+};
+
+// ---- solar imagery at the selected time
+let sel = null, imgReq = 0, imgList = [], hiddenGroups = new Set(), lbKey = null, playing = false;
+try { hiddenGroups = new Set(JSON.parse(localStorage.getItem("hiddenGroups") || "[]")); } catch {}
+
+function selShape() {
+  if (sel == null) return [];
+  return [{ type: "line", xref: "x", yref: "paper", x0: iso(sel), x1: iso(sel), y0: 0, y1: 1,
+    line: { color: TH().sel, width: 1.5, dash: "dot" } }];
+}
+function relayoutSel() {
+  const c = $("chart");
+  if (c.layout && c.data && c.data.length) Plotly.relayout("chart", { shapes: bandShapes().concat(selShape()) });
+}
+const deltaLabel = m => Math.abs(m) < 1 ? "<1 min" : (m > 0 ? "+" : "−") + (Math.abs(m) >= 90 ? (Math.abs(m) / 60).toFixed(1) + " h" : Math.round(Math.abs(m)) + " min");
+
+async function selectTime(ms) {
+  sel = Math.round(ms / 60000) * 60000;
+  updateReadouts();
+  $("selTime").textContent = fmt(iso(sel)) + " UTC";
+  relayoutSel();
+  const id = ++imgReq;
+  $("tiles").innerHTML = `<div class="hint">Finding images near ${fmt(iso(sel))}…</div>`;
+  try {
+    const r = await getJSON(`/api/images?time=${iso(sel)}`);
+    if (id !== imgReq) return;
+    imgList = r.images;
+    renderTiles();
+    if (lbKey) showLightbox(lbKey);
+  } catch (e) {
+    if (id === imgReq) $("tiles").innerHTML = `<div class="hint">⚠ ${e.message}</div>`;
+  }
+  return id;
+}
+
+function renderTiles() {
+  const groups = [...new Set(imgList.map(i => i.group))];
+  $("chips").innerHTML = groups.map(g => `<button class="chip ${hiddenGroups.has(g) ? "off" : ""}" data-g="${g}">${g}</button>`).join("");
+  if (!imgList.length) { $("tiles").innerHTML = `<div class="hint">No archived solar images within the search window of this time.</div>`; return; }
+  let html = "";
+  for (const g of groups) {
+    if (hiddenGroups.has(g)) continue;
+    html += `<div class="grp">${g}</div>`;
+    for (const i of imgList.filter(i => i.group === g)) {
+      html += `<div class="tile ${Math.abs(i.delta_min) > 15 ? "far" : ""}" data-k="${i.key}" title="${i.label} · ${fmt(i.date)} UTC">` +
+        `<img loading="lazy" src="${i.img}" alt="${i.label}"><div class="cap"><span>${i.label}</span><span>${deltaLabel(i.delta_min)}</span></div></div>`;
+    }
+  }
+  $("tiles").innerHTML = html || `<div class="hint">All sensor groups are hidden — click a chip above.</div>`;
+}
+
+$("chips").onclick = ev => {
+  const g = ev.target.dataset.g; if (!g) return;
+  hiddenGroups.has(g) ? hiddenGroups.delete(g) : hiddenGroups.add(g);
+  try { localStorage.setItem("hiddenGroups", JSON.stringify([...hiddenGroups])); } catch {}
+  renderTiles();
+};
+$("tiles").onclick = ev => { const t = ev.target.closest(".tile"); if (t) showLightbox(t.dataset.k); };
+document.querySelector("#imgcard .bar .group").onclick = ev => {
+  const st = +ev.target.dataset.step; if (st && sel != null) selectTime(sel + st * 60000);
+};
+$("peakBtn").onclick = () => { if (lastFlux) selectTime(peakTime(lastFlux)); };
+
+function peakTime(flux) {
+  let bi = -1, bv = -1;
+  flux.b.forEach((v, i) => { if (v != null && v > bv) { bv = v; bi = i; } });
+  return bi >= 0 ? flux.t[bi] + (flux.step_min > 1 ? flux.step_min * 30000 : 0) : (state.start + state.end) / 2;
+}
+
+// Lightbox with stepping / playback for one sensor
+function showLightbox(key) {
+  lbKey = key;
+  const i = imgList.find(x => x.key === key);
+  $("lightbox").classList.add("open");
+  if (!i) { $("lbTitle").textContent = key; $("lbTime").textContent = "no image near " + fmt(iso(sel)); return; }
+  $("lbTitle").textContent = i.label;
+  $("lbTime").textContent = `${fmt(i.date)} UTC (${deltaLabel(i.delta_min)} from ${hm(iso(sel))})`;
+  $("lbImg").src = i.img + "&size=1024";
+  $("lbLink").href = `https://helioviewer.org/?date=${i.date}Z`;
+}
+function closeLightbox() { $("lightbox").classList.remove("open"); lbKey = null; stopPlay(); }
+async function lbStep(dir) {
+  if (sel == null) return;
+  await selectTime(sel + dir * +$("lbStep").value * 60000);
+}
+function stopPlay() { playing = false; $("lbPlay").textContent = "▶ play"; }
+async function play() {
+  playing = true; $("lbPlay").textContent = "❚❚ pause";
+  while (playing && lbKey) {
+    await lbStep(1);
+    await new Promise(res => { const im = $("lbImg"); if (im.complete) res(); else { im.onload = im.onerror = res; } });
+    await new Promise(res => setTimeout(res, 350));
+    if (sel > Date.now()) stopPlay();
+  }
+}
+$("lightbox").onclick = ev => {
+  if (ev.target.id === "lightbox" || ev.target.id === "lbClose") return closeLightbox();
+  const d = +ev.target.dataset.lb; if (d) { stopPlay(); lbStep(d); }
+};
+$("lbPlay").onclick = () => playing ? stopPlay() : play();
+document.addEventListener("keydown", ev => {
+  if (!$("lightbox").classList.contains("open")) return;
+  if (ev.key === "Escape") closeLightbox();
+  if (ev.key === "ArrowRight") { stopPlay(); lbStep(1); }
+  if (ev.key === "ArrowLeft") { stopPlay(); lbStep(-1); }
+  if (ev.key === " ") { ev.preventDefault(); playing ? stopPlay() : play(); }
+});
+
+// ---- skins (standard / LCARS)
+const presetsHome = { parent: $("presets").parentNode, next: $("presets").nextSibling };
+let audioOn = true, actx = null;
+try { audioOn = localStorage.getItem("lcarsAudio") !== "0"; } catch {}
+
+function applySkin(name, redraw = true) {
+  skin = name === "lcars" ? "lcars" : "std";
+  document.documentElement.dataset.skin = skin;
+  try { localStorage.setItem("skin", skin); } catch {}
+  if (skin === "lcars") $("lcSlot").appendChild($("presets"));
+  else presetsHome.parent.insertBefore($("presets"), presetsHome.next);
+  $("skinBtn").textContent = skin === "lcars" ? "Standard" : "LCARS";
+  $("lcAudio").classList.toggle("on", audioOn);
+  if (redraw && lastFlux) {
+    load(state.start, state.end);
+    setTimeout(() => { try { Plotly.Plots.resize("chart"); Plotly.Plots.resize("daily"); } catch {} }, 80);
+  }
+}
+$("skinBtn").onclick = () => applySkin(skin === "lcars" ? "std" : "lcars");
+$("lcAudio").onclick = () => {
+  audioOn = !audioOn; $("lcAudio").classList.toggle("on", audioOn);
+  try { localStorage.setItem("lcarsAudio", audioOn ? "1" : "0"); } catch {}
+};
+
+// Console chirp on button presses (LCARS skin only)
+function chirp(freq) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.type = "sine"; o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.06);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + 0.13);
+  } catch {}
+}
+document.addEventListener("click", ev => {
+  if (skin !== "lcars" || !audioOn) return;
+  const b = ev.target.closest("button, .tile, tbody tr");
+  if (b) chirp(b.id === "lcAudio" ? 600 : b.matches(".tile, tr") ? 1500 : 900 + Math.random() * 500);
+}, true);
+
+// Sidebar readouts
+function stardate(ms) {
+  const d = new Date(ms), y = d.getUTCFullYear(), start = Date.UTC(y, 0, 1);
+  return `${y}${String(Math.floor((ms - start) / 864e5) + 1).padStart(3, "0")}.${Math.floor(((ms - start) % 864e5) / 8640e3)}`;
+}
+function fluxClass(v) {
+  if (v == null) return "—";
+  const [c, lo] = [...CLASSES].reverse().find(([, lo]) => v >= lo) || ["A", 1e-8];
+  return c + (v / lo).toFixed(1);
+}
+function updateReadouts() {
+  $("lcDate").textContent = stardate(sel ?? Date.now());
+  if (lastFlux) {
+    $("lcSat").textContent = lastFlux.sats.length ? "GOES-" + lastFlux.sats.join("/") : "OFFLINE";
+    const mx = Math.max(...lastFlux.b.filter(v => v != null));
+    $("lcPeak").textContent = isFinite(mx) ? fluxClass(mx) : "—";
+  }
+  $("lcCount").textContent = $("nX").textContent + "·" + $("nM").textContent + "·" + $("nC").textContent;
+}
+
+// Zoom/pan on the chart → refetch at full resolution for the new window.
+function hookRelayout() {
+  $("chart").on("plotly_relayout", e => {
+    let s, en;
+    if (e["xaxis.range[0]"]) { s = e["xaxis.range[0]"]; en = e["xaxis.range[1]"]; }
+    else if (e["xaxis.range"]) { [s, en] = e["xaxis.range"]; }
+    else if (e["xaxis.autorange"]) return;  // double-click handled below
+    else return;
+    const toMs = v => Date.parse(String(v).replace(" ", "T") + (String(v).includes("Z") ? "" : "Z"));
+    clearTimeout(relayoutTimer);
+    relayoutTimer = setTimeout(() => load(toMs(s), toMs(en), { fromZoom: true }), 250);
+  });
+  $("chart").on("plotly_click", e => {
+    const x = e.points && e.points[0] && e.points[0].x; if (!x) return;
+    selectTime(Date.parse(String(x).replace(" ", "T") + (String(x).includes("Z") ? "" : "Z")));
+  });
+  $("chart").on("plotly_doubleclick", () => {
+    const span = state.end - state.start, mid = state.start + span / 2;
+    load(mid - span * 2, Math.min(Date.now(), mid + span * 2));
+    return false;
+  });
+}
+
+(function init() {
+  let sk = new URLSearchParams(location.search).get("skin");
+  try { sk = sk || localStorage.getItem("skin"); } catch {}
+  applySkin(sk || "std", false);
+  const p = new URLSearchParams(location.hash.slice(1));
+  if (p.get("sat")) $("sat").value = p.get("sat");
+  const r = readUrl();
+  const end = Date.now();
+  Plotly.newPlot("chart", [], {}, { responsive: true }).then(hookRelayout);
+  load(...(r || [end - 30 * 864e5, end]));
+  window.addEventListener("hashchange", () => {
+    const r = readUrl();
+    if (r && (r[0] !== state.start || r[1] !== state.end)) load(...r);
+  });
+})();
+</script>
+</body>
+</html>

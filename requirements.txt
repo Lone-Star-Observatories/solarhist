@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+xarray
+h5netcdf
+h5py
+pandas
+pyarrow
+requests
+numpy
