@@ -54,7 +54,8 @@ SENSORS = [
     ("euvib195", "STEREO-B EUVI 195", "STEREO",    25, 4.8, 120),
     ("c2",      "LASCO C2",        "Coronagraphs", 4,  24,  120),
     ("c3",      "LASCO C3",        "Coronagraphs", 5,  110, 120),
-    ("ccor1",   "GOES CCOR-1",     "Coronagraphs", 132, 66, 120),
+    # GOES CCOR-1 (sourceId 132): Helioviewer's takeScreenshot currently fails for it server-side
+    # ("Class Image_ImageType_CCOR-1Image not found"), so it's left out until that's fixed.
     ("cor1a",   "STEREO-A COR1",   "Coronagraphs", 28, 12,  120),
     ("cor2a",   "STEREO-A COR2",   "Coronagraphs", 29, 60,  120),
 ]

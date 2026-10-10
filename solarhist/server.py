@@ -73,6 +73,7 @@ def flares(start: str, end: str, min_class: str = "C"):
         rows.append({"begin": r.begin.isoformat(), "peak": r.peak.isoformat(),
                      "end": r.end.isoformat() if pd.notna(r.end) else None,
                      "cls": r.cls, "flux": r.peak_flux, "region": r.region if isinstance(r.region, str) else None,
+                     "int_flux": float(r.int_flux) if pd.notna(r.int_flux) else None,
                      "obs": r.obs})
     return {"flares": rows}
 
