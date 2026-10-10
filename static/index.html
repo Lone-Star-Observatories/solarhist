@@ -273,22 +273,46 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
 #lbWrap .xh { width: 9%; }
 :root[data-skin=lcars] .xh circle, :root[data-skin=lcars] .xh line { stroke: var(--lc-gold); }
 #impLoc { color: var(--muted); font-size: 12px; }
+
+/* ---- glossary tooltips */
+.term { border-bottom: 1px dotted currentColor; cursor: help; }
+.term:focus { outline: 1px dashed var(--accent); outline-offset: 2px; }
+.terms { color: var(--muted); font-size: 12px; padding: 4px 8px 2px; line-height: 1.9; }
+.terms .term { margin-right: 12px; white-space: nowrap; }
+#gloss { position: fixed; z-index: 200; display: none; max-width: min(400px, calc(100vw - 16px)); background: #0d1320; color: var(--text);
+  border: 1px solid #3a4a66; border-radius: 10px; padding: 10px 12px 9px; box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  font-size: 13px; line-height: 1.45; text-transform: none; letter-spacing: 0; }
+#gloss.open { display: block; }
+#gloss .gt { font-weight: 700; font-size: 14px; color: var(--accent); margin-bottom: 4px; }
+#gloss .gd { margin-bottom: 6px; }
+#gloss .gw { color: #aeb9cc; font-size: 12.5px; border-top: 1px solid #253048; padding-top: 6px; }
+#gloss .gw.dim { color: var(--muted); font-style: italic; }
+#gloss .gl { color: var(--muted); font-weight: 600; }
+#gloss .glinks { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 8px; }
+#gloss .glinks a { color: #7fb8ff; text-decoration: none; font-size: 12.5px; }
+#gloss .glinks a:hover { text-decoration: underline; }
+:root[data-skin=lcars] #gloss { background: #000; border: 2px solid var(--lc-lilac); border-radius: 0 20px 0 20px; font-family: Antonio, "Arial Narrow", sans-serif; font-size: 15px; }
+:root[data-skin=lcars] #gloss .gt { color: var(--lc-orange); font-size: 19px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+:root[data-skin=lcars] #gloss .gd { color: var(--lc-peach); }
+:root[data-skin=lcars] #gloss .gw { color: var(--lc-blue); border-top-color: #33334d; font-size: 14px; }
+:root[data-skin=lcars] #gloss .glinks a { color: #000; background: var(--lc-sky); border-radius: 999px; padding: 2px 12px; font-weight: 600; text-transform: uppercase; }
+:root[data-skin=lcars] .terms { color: var(--lc-blue); font-size: 14px; }
 </style>
 </head>
 <body>
 <div class="lc lc-tl"></div>
 <aside id="lcSide">
   <div id="lcSlot"></div>
-  <div class="lc-read" style="background:var(--lc-peach)"><small>STARDATE</small><b id="lcDate">—</b></div>
-  <div class="lc-read" style="background:var(--lc-orange)"><small>SENSOR</small><b id="lcSat">—</b></div>
-  <div class="lc-read" style="background:var(--lc-lilac)"><small>PEAK FLUX</small><b id="lcPeak">—</b></div>
-  <div class="lc-read" style="background:var(--lc-gold)"><small>FLARES X·M·C</small><b id="lcCount">—</b></div>
+  <div class="lc-read" style="background:var(--lc-peach)"><small><span class="term" data-term="stardate" tabindex="0">STARDATE</span></small><b id="lcDate">—</b></div>
+  <div class="lc-read" style="background:var(--lc-orange)"><small><span class="term" data-term="goes" tabindex="0">SENSOR</span></small><b id="lcSat">—</b></div>
+  <div class="lc-read" style="background:var(--lc-lilac)"><small><span class="term" data-term="flareclass" tabindex="0">PEAK FLUX</span></small><b id="lcPeak">—</b></div>
+  <div class="lc-read" style="background:var(--lc-gold)"><small><span class="term" data-term="flareclass" tabindex="0">FLARES X·M·C</span></small><b id="lcCount">—</b></div>
   <button class="lc-btn" id="lcAudio">AUDIO</button>
   <div class="lc-fill"></div>
   <div class="lc-bl"></div>
 </aside>
 <header>
-  <h1>☀︎ <span>GOES</span> Solar X-ray History</h1>
+  <h1>☀︎ <span><span class="term" data-term="goes" tabindex="0">GOES</span></span> Solar X-ray History</h1>
   <div class="group">
     <label>From (UTC)</label><input type="datetime-local" id="start">
     <label>To</label><input type="datetime-local" id="end">
@@ -300,15 +324,15 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
     <button data-d="1096">3y</button><button data-d="4018">11y</button><button data-d="all">All</button>
   </div>
   <div class="group">
-    <label>Satellite</label>
+    <label><span class="term" data-term="goes" tabindex="0">Satellite</span></label>
     <select id="sat">
       <option value="auto">Auto (primary)</option>
       <option>19</option><option>18</option><option>17</option><option>16</option><option>15</option>
       <option>14</option><option>13</option><option>12</option><option>11</option><option>10</option>
       <option>9</option><option>8</option>
     </select>
-    <label><input type="checkbox" id="showA" checked> XRS-A</label>
-    <label>Flare marks</label>
+    <label><input type="checkbox" id="showA" checked> <span class="term" data-term="xrsa" tabindex="0">XRS-A</span></label>
+    <label><span class="term" data-term="flareclass" tabindex="0">Flare marks</span></label>
     <select id="minMark"><option value="X">≥X</option><option value="M" selected>≥M</option><option value="C">≥C</option><option value="none">off</option></select>
     <button id="csv" title="1-minute data, up to 400 days">CSV</button>
     <button id="skinBtn" title="Switch interface skin">LCARS</button>
@@ -316,10 +340,11 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
 </header>
 <main>
   <div id="status"></div>
-  <div class="card"><div id="chart"></div></div>
+  <div class="card"><div id="chart"></div><div class="terms">Terms: <span class="term" data-term="xrsb" tabindex="0">XRS-B 1–8 Å</span> <span class="term" data-term="xrsa" tabindex="0">XRS-A 0.5–4 Å</span> <span class="term" data-term="flux" tabindex="0">Flux W/m²</span> <span class="term" data-term="angstrom" tabindex="0">Å</span> <span class="term" data-term="flareclass" tabindex="0">Flare classes A·B·C·M·X</span> <span class="term" data-term="flare" tabindex="0">Flares</span> <span class="term" data-term="cme" tabindex="0">CME ◆</span> <span class="term" data-term="halo" tabindex="0">Halo CME</span> <span class="term" data-term="shock" tabindex="0">Shock ▼</span> <span class="term" data-term="gscale" tabindex="0">G1–G5</span> <span class="term" data-term="resolution" tabindex="0">Max per point</span> <span class="term" data-term="goes" tabindex="0">GOES</span> <span class="term" data-term="utc" tabindex="0">UTC</span></div></div>
   <div class="card" id="earthcard">
-    <div class="bar"><h2>Effects at Earth</h2><span id="earthNote"></span><button id="earthToggle">Hide</button></div>
+    <div class="bar"><h2>Effects at <span class="term" data-term="spaceweather" tabindex="0">Earth</span></h2><span id="earthNote"></span><button id="earthToggle">Hide</button></div>
     <div id="earth"></div>
+    <div class="terms">Terms: <span class="term" data-term="solarwind" tabindex="0">Solar wind V, n</span> <span class="term" data-term="bz" tabindex="0">Bz</span> <span class="term" data-term="nT" tabindex="0">nT</span> <span class="term" data-term="kp" tabindex="0">Kp</span> <span class="term" data-term="gscale" tabindex="0">G-scale</span> <span class="term" data-term="dst" tabindex="0">Dst</span> <span class="term" data-term="protons" tabindex="0">>10 MeV protons</span> <span class="term" data-term="mev" tabindex="0">MeV</span> <span class="term" data-term="sscale" tabindex="0">S-scale</span> <span class="term" data-term="omni" tabindex="0">OMNI</span> <span class="term" data-term="storm" tabindex="0">Geomagnetic storm</span></div>
   </div>
   <div class="card" id="impact">
     <div class="head">
@@ -348,28 +373,29 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
       </div>
       <div class="chips" id="chips"></div>
     </div>
+    <div class="terms" id="imgTerms">Terms: <span class="term" data-term="helioviewer" tabindex="0">Helioviewer</span> <span class="term" data-term="euv" tabindex="0">EUV / Å wavelengths</span> <span class="term" data-term="sdo" tabindex="0">SDO AIA/HMI</span> <span class="term" data-term="suvi" tabindex="0">SUVI</span> <span class="term" data-term="soho" tabindex="0">SOHO</span> <span class="term" data-term="stereo" tabindex="0">STEREO</span> <span class="term" data-term="coronagraph" tabindex="0">Coronagraph</span> <span class="term" data-term="magnetogram" tabindex="0">Magnetogram</span> <span class="term" data-term="helioprojective" tabindex="0">Crosshair position</span></div>
     <div class="grid" id="tiles"><div class="hint">Images come from Helioviewer (SDO, GOES SUVI, SOHO, STEREO, PROBA2, Hinode, GONG, TRACE, Yohkoh, coronagraphs).</div></div>
   </div>
   <div class="row">
     <div class="card">
       <h2>Flares in range</h2>
       <div class="stats">
-        <div class="stat X"><b id="nX">–</b>X</div>
-        <div class="stat M"><b id="nM">–</b>M</div>
-        <div class="stat C"><b id="nC">–</b>C</div>
+        <div class="stat X"><b id="nX">–</b><span class="term" data-term="flareclass" tabindex="0">X</span></div>
+        <div class="stat M"><b id="nM">–</b><span class="term" data-term="flareclass" tabindex="0">M</span></div>
+        <div class="stat C"><b id="nC">–</b><span class="term" data-term="flareclass" tabindex="0">C</span></div>
       </div>
       <div class="big" id="biggest"></div>
-      <div class="hint">Event lists: SWPC Warehouse FTP (1996 – today). Drag on the chart to zoom; double-click to zoom back out.</div>
+      <div class="hint"><span class="term" data-term="eventlist" tabindex="0">Event lists</span>: SWPC Warehouse FTP (1996 – today). Drag on the chart to zoom; double-click to zoom back out.</div>
     </div>
     <div class="card">
       <h2>Flare list (click to zoom)</h2>
       <div class="tbl"><table>
-        <thead><tr><th data-k="peak">Peak (UTC)</th><th data-k="flux">Class</th><th>Begin</th><th>End</th><th data-k="region">Region</th><th>Obs</th></tr></thead>
+        <thead><tr><th data-k="peak">Peak (<span class="term" data-term="utc" tabindex="0">UTC</span>)</th><th data-k="flux"><span class="term" data-term="flareclass" tabindex="0">Class</span></th><th>Begin</th><th>End</th><th data-k="region"><span class="term" data-term="ar" tabindex="0">Region</span></th><th><span class="term" data-term="goes" tabindex="0">Obs</span></th></tr></thead>
         <tbody id="flares"></tbody>
       </table></div>
     </div>
   </div>
-  <div class="card"><h2>Daily flare counts &amp; F10.7</h2><div id="daily"></div></div>
+  <div class="card"><h2>Daily <span class="term" data-term="flareclass" tabindex="0">flare counts</span> &amp; <span class="term" data-term="f107" tabindex="0">F10.7</span></h2><div id="daily"></div></div>
   <div class="lc lc-foot"><span>SOLAR OBSERVATION · GOES XRS</span></div>
 </main>
 <div id="lightbox">
@@ -385,6 +411,7 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
     <button id="lbClose">✕ close</button>
   </div>
 </div>
+<script src="/static/glossary.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const EARLIEST = Date.UTC(1995, 0, 1);
@@ -468,9 +495,9 @@ async function load(start, end, { fromZoom = false } = {}) {
     flareRows = fl.flares; renderFlares(); renderStats(); updateReadouts();
     if (sel != null) { showImpact(flareAt(sel)); updateFlareLoc(); }
     const sats = flux.sats.length ? "GOES-" + flux.sats.join(", GOES-") : "no flux data in this range";
-    $("status").innerHTML = `<span>${sats}</span><span>${stepLabel(flux.step_min)}</span>` +
+    $("status").innerHTML = `<span>${gl("goes", sats)}</span><span>${gl("resolution", stepLabel(flux.step_min))}</span>` +
       `<span>${flux.t.length.toLocaleString()} points</span>` +
-      (flux.last ? `<span>data through ${fmt(flux.last)} UTC</span>` : "") +
+      (flux.last ? `<span>data through ${fmt(flux.last)} ${gl("utc", "UTC")}</span>` : "") +
       (fl.error ? `<span class="busy">events: ${fl.error}</span>` : "");
     loadDaily(start, end, id);
     loadEffects(start, end, id);
@@ -537,7 +564,7 @@ function renderStats() {
   let big = null;
   for (const f of flareRows) { n[f.cls[0]] = (n[f.cls[0]] || 0) + 1; if (!big || f.flux > big.flux) big = f; }
   $("nX").textContent = n.X; $("nM").textContent = n.M; $("nC").textContent = n.C;
-  $("biggest").innerHTML = big ? `Largest: <strong>${big.cls}</strong> at ${fmt(big.peak)} UTC${big.region ? ` · AR ${big.region}` : ""}` : "No C-class or larger flares listed.";
+  $("biggest").innerHTML = big ? `Largest: <strong>${gl("flareclass", big.cls)}</strong> at ${fmt(big.peak)} UTC${big.region ? ` · ${gl("ar", "AR")} ${big.region}` : ""}` : "No C-class or larger flares listed.";
 }
 
 function renderFlares() {
@@ -608,7 +635,7 @@ $("flares").onclick = ev => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 document.querySelector("thead").onclick = ev => {
-  const k = ev.target.dataset.k; if (!k) return;
+  const th = ev.target.closest("th"), k = th && th.dataset.k; if (!k) return;
   sortDir = sortKey === k ? -sortDir : -1; sortKey = k; renderFlares();
 };
 
@@ -629,7 +656,7 @@ async function loadEffects(start, end, id) {
     if (id !== reqId) return;
     lastEffects = e;
     drawEffects(e);
-    $("earthNote").textContent = `Solar wind ${e.wind_res} (NASA OMNI + SWPC real-time) · Kp, Dst hourly · >10 MeV protons` +
+    $("earthNote").innerHTML = `${gl("solarwind", "Solar wind")} ${e.wind_res} (${gl("omni", "NASA OMNI")} + SWPC real-time) · ${gl("kp", "Kp")}, ${gl("dst", "Dst")} hourly · ${gl("protons", ">10 MeV protons")}` +
       (e.protons_note ? ` — ${e.protons_note}` : "");
   } catch (err) {
     if (id === reqId) $("earthNote").textContent = "⚠ " + err.message;
@@ -761,22 +788,22 @@ function consequences(f) {
   const hit = cmeForFlare(f);
   if (!hit) {
     const inData = cmeList.length || cmeNote;
-    return `<b>Consequences:</b> ${inData ? "no CME linked to this flare in the catalogs." : "CME data not loaded for this window."} ` +
-      "Energetic protons can still arrive 20 min to hours after a big flare.";
+    return `<b>Consequences:</b> ${inData ? `no ${gl("cme", "CME")} linked to this flare in the catalogs.` : "CME data not loaded for this window."} ` +
+      `${gl("protons", "Energetic protons")} can still arrive 20 min to hours after a big flare.`;
   }
   const c = hit.cme, t0 = Date.parse(c.time + "Z");
-  let s = `<b>Consequences:</b> CME ${c.speed ? Math.round(c.speed).toLocaleString() + " km/s" : ""}` +
-    `${c.type === "halo" ? " (halo)" : c.type ? ` (type ${c.type})` : ""} launched ${fmt(c.time)}`;
+  let s = `<b>Consequences:</b> ${gl("cme", "CME")} ${c.speed ? Math.round(c.speed).toLocaleString() + " km/s" : ""}` +
+    `${c.type === "halo" ? ` (${gl("halo", "halo")})` : c.type ? ` (${gl("cmetype", "type " + c.type)})` : ""} launched ${fmt(c.time)}`;
   if (c.arrival) {
     const h = (Date.parse(c.arrival + "Z") - t0) / 3600e3;
-    s += ` → shock arrived at Earth ${fmt(c.arrival)} (+${h.toFixed(0)} h)`;
+    s += ` → ${gl("shock", "shock arrived at Earth")} ${fmt(c.arrival)} (+${h.toFixed(0)} h)`;
   } else if (c.catalog === "DONKI") s += " → no shock at Earth recorded";
   if (c.storm) {
     const g = gLevel(c.storm.kp_max);
-    s += ` → ${g ? `<span class="rs R${g[1]}">${g}</span> ${G_NAMES[g]} storm, ` : "storm, "}Kp ${c.storm.kp_max}` +
-      `${c.storm.dst_min != null ? `, Dst ${c.storm.dst_min} nT` : ""}`;
+    s += ` → ${g ? `${gl("gscale", `<span class="rs R${g[1]}">${g}</span>`)} ${G_NAMES[g]} ${gl("storm", "storm")}, ` : gl("storm", "storm") + ", "}${gl("kp", "Kp")} ${c.storm.kp_max}` +
+      `${c.storm.dst_min != null ? `, ${gl("dst", "Dst")} ${c.storm.dst_min} nT` : ""}`;
   }
-  return s + ` <span class="sub">(${hit.how})</span>`;
+  return s + ` <span class="sub">(${hit.how === "linked in NASA DONKI" ? `linked in ${gl("donki", "NASA DONKI")}` : `${gl("cdaw", "LASCO catalog")}, associated by timing only`})</span>`;
 }
 
 // Approximate auroral-oval equatorward edge: ~66° − 2°·Kp magnetic latitude around the geomagnetic poles.
@@ -848,18 +875,18 @@ function showImpact(f) {
   const area = Math.PI * RE_M * RE_M, sphere = 4 * Math.PI * (r * AU_M) ** 2;
   const rs = rScale(f.flux), haf0 = 10 * Math.log10(f.flux) + 65;
   $("impH").textContent = skin === "lcars" ? "Impact analysis" : "Flare impact";
-  $("impTitle").textContent = `${f.cls}${f.region ? " · AR " + f.region : ""}`;
-  $("impSub").textContent = `begin ${hm(f.begin)} · peak ${hm(f.peak)} · end ${hm(f.end)} UTC (as seen at Earth)`;
+  $("impTitle").innerHTML = `${gl("flareclass", f.cls)}${f.region ? ` · ${gl("ar", "AR")} ${f.region}` : ""}`;
+  $("impSub").innerHTML = `begin ${hm(f.begin)} · peak ${hm(f.peak)} · end ${hm(f.end)} ${gl("utc", "UTC")} (${gl("lighttime", "as seen at Earth")})`;
   $("ltText").innerHTML = `Flare at the Sun <b>${hms(atSun)}</b> → X-rays reach Earth <b>${hms(peak)}</b> UTC` +
-    ` &nbsp;·&nbsp; ${m} m ${s} s light travel, r = ${r.toFixed(4)} AU`;
+    ` &nbsp;·&nbsp; ${gl("lighttime", `${m} m ${s} s light travel`)}, ${gl("au", `r = ${r.toFixed(4)} AU`)}`;
   const nums = [
-    ["Peak power hitting Earth", power(f.flux * area), `1–8 Å band · ${f.flux.toExponential(1)} W/m² × πR⊕²`],
-    f.int_flux != null ? ["Energy absorbed by Earth", `${(f.int_flux * area / KT_J).toFixed(f.int_flux * area / KT_J < 10 ? 1 : 0)} kt TNT`,
-      `${sci(f.int_flux * area, "J")} · integrated flux ${f.int_flux} J/m²`] : null,
-    f.int_flux != null ? ["Whole flare, 1–8 Å band", sci(f.int_flux * sphere, "J"), "radiated in all directions"] : null,
-    ["Fraction that hits Earth", sci(area / sphere), `= ${(area / sphere * 100).toExponential(1)} % · πR⊕² / 4πr²`],
-    ["Radio blackout", rs ? `<span class="rs ${rs}">${rs}</span> ${R_NAMES[rs]}` : "below R1",
-      haf0 > 0 ? `HF absorbed up to ≈ ${haf0.toFixed(0)} MHz at the subsolar point` : "no significant HF absorption"],
+    [gl("peakpower", "Peak power hitting Earth"), power(f.flux * area), `${gl("xrsb", "1–8 Å band")} · ${gl("flux", f.flux.toExponential(1) + " W/m²")} × πR⊕²`],
+    f.int_flux != null ? [gl("intflux", "Energy absorbed by Earth"), gl("tnt", `${(f.int_flux * area / KT_J).toFixed(f.int_flux * area / KT_J < 10 ? 1 : 0)} kt TNT`),
+      `${gl("joule", sci(f.int_flux * area, "J"))} · ${gl("intflux", `integrated flux ${f.int_flux} J/m²`)}`] : null,
+    f.int_flux != null ? [gl("intflux", "Whole flare, 1–8 Å band"), gl("joule", sci(f.int_flux * sphere, "J")), "radiated in all directions"] : null,
+    [gl("fraction", "Fraction that hits Earth"), sci(area / sphere), `= ${(area / sphere * 100).toExponential(1)} % · πR⊕² / 4πr²`],
+    [gl("rscale", "Radio blackout"), rs ? `${gl("rscale", `<span class="rs ${rs}">${rs}</span>`)} ${R_NAMES[rs]}` : "below R1",
+      haf0 > 0 ? `${gl("hf", "HF")} absorbed up to ≈ ${haf0.toFixed(0)} MHz at the ${gl("subsolar", "subsolar point")}` : "no significant HF absorption"],
   ].filter(Boolean);
   $("impNums").innerHTML = nums.map(([k, v, n]) => `<div class="num"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
   $("impLater").innerHTML = consequences(f);
@@ -924,10 +951,10 @@ function drawGlobe(f, peak) {
       showframe: false, bgcolor: "rgba(0,0,0,0)", lataxis: { showgrid: true, gridcolor: lc ? "#1c1c2c" : "#1e2738" },
       lonaxis: { showgrid: true, gridcolor: lc ? "#1c1c2c" : "#1e2738" } },
   }, { displaylogo: false, responsive: true, topojsonURL: "/static/vendor/topojson/" });
-  $("globeCap").innerHTML = `Dayside HF radio absorption at flare peak (NOAA D-RAP model: (10·log₁₀F + 65) MHz × cos<sup>0.75</sup>χ). ` +
-    `★ subsolar point ${Math.abs(ss.lat).toFixed(1)}°${ss.lat >= 0 ? "N" : "S"}, ${Math.abs(ss.lon).toFixed(1)}°${ss.lon >= 0 ? "E" : "W"}. ` +
+  $("globeCap").innerHTML = `Dayside ${gl("hf", "HF radio")} absorption at flare peak (NOAA ${gl("drap", "D-RAP model")}: (10·log₁₀F + 65) MHz × cos<sup>0.75</sup>${gl("zenith", "χ")}). ` +
+    `★ ${gl("subsolar", "subsolar point")} ${Math.abs(ss.lat).toFixed(1)}°${ss.lat >= 0 ? "N" : "S"}, ${Math.abs(ss.lon).toFixed(1)}°${ss.lon >= 0 ? "E" : "W"}. ` +
     `X-rays are absorbed 60–100 km up and never reach the ground. Drag to rotate.` +
-    (stormLayer(f).length ? ` <span style="color:#5dff9d">- - -</span> approximate auroral oval edge during the linked storm (66° − 2°·Kp magnetic latitude), days later and on both day and night sides.` : "");
+    (stormLayer(f).length ? ` <span style="color:#5dff9d">- - -</span> ${gl("auroraoval", "approximate auroral oval edge")} during the linked ${gl("storm", "storm")} (66° − 2°·${gl("kp", "Kp")} magnetic latitude), days later and on both day and night sides.` : "");
 }
 
 // ---- solar imagery at the selected time
@@ -974,10 +1001,11 @@ function renderTiles() {
   let html = "";
   for (const g of groups) {
     if (hiddenGroups.has(g)) continue;
-    html += `<div class="grp">${g}</div>`;
+    const gt = { "SDO AIA": "sdo", "SDO HMI": "sdo", "GOES SUVI": "suvi", "SOHO": "soho", "STEREO": "stereo", "Coronagraphs": "coronagraph", "Other EUV / X-ray": "euv" }[g];
+    html += `<div class="grp">${gt ? gl(gt, g) : g}</div>`;
     for (const i of imgList.filter(i => i.group === g)) {
       html += `<div class="tile ${Math.abs(i.delta_min) > 15 ? "far" : ""}" data-k="${i.key}" title="${i.label} · ${fmt(i.date)} UTC">` +
-        `<div class="iw"><img loading="lazy" src="${i.img}" alt="${i.label}">${crosshair(i)}</div><div class="cap"><span>${i.label}</span><span>${deltaLabel(i.delta_min)}</span></div></div>`;
+        `<div class="iw"><img loading="lazy" src="${i.img}" alt="${i.label}">${crosshair(i)}</div><div class="cap"><span>${SENSOR_TERM(i.key) ? gl(SENSOR_TERM(i.key), i.label) : i.label}</span><span>${deltaLabel(i.delta_min)}</span></div></div>`;
     }
   }
   $("tiles").innerHTML = html || `<div class="hint">All sensor groups are hidden — click a chip above.</div>`;
@@ -1019,7 +1047,7 @@ async function updateFlareLoc() {
 function setFlareLoc(loc) {
   const changed = JSON.stringify(loc) !== JSON.stringify(flareLoc);
   flareLoc = loc;
-  $("impLoc").textContent = loc ? ` · location (${Math.round(loc.x)}″, ${Math.round(loc.y)}″) from ${loc.source}` : "";
+  $("impLoc").innerHTML = loc ? ` · ${gl("helioprojective", `location (${Math.round(loc.x)}″, ${Math.round(loc.y)}″)`)} from ${loc.source.startsWith("HEK") ? gl("hek", loc.source) : gl("donki", loc.source)}` : "";
   if (changed && imgList.length) { renderTiles(); if (lbKey) $("lbXh").innerHTML = crosshair(imgList.find(x => x.key === lbKey) || {}); }
 }
 function crosshair(i) {
@@ -1037,7 +1065,7 @@ function showLightbox(key) {
   const i = imgList.find(x => x.key === key);
   $("lightbox").classList.add("open");
   if (!i) { $("lbTitle").textContent = key; $("lbTime").textContent = "no image near " + fmt(iso(sel)); return; }
-  $("lbTitle").textContent = i.label;
+  $("lbTitle").innerHTML = SENSOR_TERM(i.key) ? gl(SENSOR_TERM(i.key), i.label) : i.label;
   $("lbTime").textContent = `${fmt(i.date)} UTC (${deltaLabel(i.delta_min)} from ${hm(iso(sel))})`;
   $("lbImg").src = i.img + "&size=1024";
   $("lbXh").innerHTML = crosshair(i);

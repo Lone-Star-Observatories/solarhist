@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import cmes, core, flareloc, images, omni
+from . import cmes, core, flareloc, images, omni, wiki
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 app = FastAPI(title="Solar X-ray History")
@@ -143,3 +143,8 @@ def cme_list(start: str, end: str):
 @app.get("/api/flareloc")
 def flare_location(peak: str, cls: str | None = None):
     return {"loc": flareloc.locate(_parse(peak), cls)}
+
+
+@app.get("/api/wiki")
+def wiki_summaries(titles: str):
+    return wiki.summaries(titles.split("|"))

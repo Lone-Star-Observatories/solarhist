@@ -30,6 +30,9 @@ watching at the moment you click.
 - **Daily summary.** Flare counts per day and F10.7 radio flux.
 - **CSV export** of the 1-minute data, and **bookmarkable views** (the time window is kept in the URL).
 - **LCARS skin.** One click turns the interface into a starship-style console.
+- **Explains itself.** Every piece of jargon and every unit (Kp, Dst, Bz, pfu, Å, R/G/S scales, D-RAP,
+  CME types, instruments …) has a dotted underline. Hover or tap it for a plain-language explanation, the
+  Wikipedia summary, and links to Wikipedia and to the data source the app actually uses.
 - Everything is fetched **on demand and cached locally**. No accounts or API keys.
 
 ## Install
@@ -257,6 +260,7 @@ The UI is a single static page on top of a small JSON API that you can also call
 | `GET /api/effects?start=…&end=…` | Solar wind speed/density, Bz min/max, Kp, Dst, >10 MeV protons |
 | `GET /api/cmes?start=…&end=…` | CMEs with linked flares, shock arrival and storm (Kp, Dst) |
 | `GET /api/flareloc?peak=…&cls=X8.7` | Flare position in helioprojective arcsec |
+| `GET /api/wiki?titles=A|B|…` | Wikipedia intro summaries for the glossary (batched, cached 30 days) |
 | `GET /api/status` | Download progress and cache size |
 
 Times are ISO 8601 in UTC, e.g. `2024-05-14T16:51:00`.
@@ -273,12 +277,27 @@ solarhist/
 │   ├── omni.py          # solar wind / Kp / Dst / protons (OMNI HAPI, GOES SGPS, SWPC real-time)
 │   ├── cmes.py          # DONKI CME→shock→storm chain, CDAW LASCO catalog
 │   ├── flareloc.py      # flare positions from HEK (DONKI fallback)
+│   ├── wiki.py          # Wikipedia summaries for glossary tooltips (batched, cached)
 │   └── server.py        # FastAPI app and JSON endpoints
 ├── static/
 │   ├── index.html       # the whole UI (Plotly charts, imagery panel, both skins)
+│   ├── glossary.js      # term definitions, data-source links and the tooltip popover
 │   └── vendor/plotly.min.js
 └── docs/screenshots/
 ```
+
+## Glossary tooltips
+
+Dotted-underlined words are glossary terms; each chart also has a **Terms:** row. Hover (or tap / focus with
+Tab) to see:
+
+1. what it is and how this app uses it,
+2. the Wikipedia introduction (fetched once through `/api/wiki`, up to 20 titles per request, cached for 30 days),
+3. links to the Wikipedia article and to the data source behind it (NOAA SWPC, NCEI, NASA OMNI, DONKI, GFZ,
+   Kyoto WDC, Helioviewer, mission pages …).
+
+Definitions live in `static/glossary.js`. Add a `[name, explanation, Wikipedia title, source]` entry and wrap
+text with `gl("key", "label")` to make a new term.
 
 ## Credits
 
@@ -291,6 +310,7 @@ solarhist/
 - Solar imagery via **[Helioviewer](https://helioviewer.org)** (ESA/NASA). Image data courtesy of the NASA
   SDO, ESA/NASA SOHO, NASA STEREO, ESA PROBA2, JAXA/NASA Hinode, NOAA GOES SUVI/CCOR, NSO GONG, NASA TRACE,
   ISAS Yohkoh and ESA/NASA Solar Orbiter teams.
+- Glossary summaries from **Wikipedia** (CC BY-SA), fetched via the MediaWiki API with attribution links.
 - Charts by [Plotly.js](https://plotly.com/javascript/) (MIT, vendored in `static/vendor`). The LCARS skin
   uses the [Antonio](https://fonts.google.com/specimen/Antonio) font (SIL OFL) from Google Fonts.
 - The LCARS skin is an unofficial, fan-made tribute. *Star Trek* and LCARS are trademarks of CBS Studios /
