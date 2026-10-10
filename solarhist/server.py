@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import core, images, omni
+from . import cmes, core, images, omni
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 app = FastAPI(title="Solar X-ray History")
@@ -130,3 +130,11 @@ def img(key: str, date: str, size: int = 512):
 def effects(start: str, end: str, points: int = Query(1500, ge=100, le=10000)):
     a, b = _range(start, end)
     return omni.effects(a, b, points)
+
+
+@app.get("/api/cmes")
+def cme_list(start: str, end: str):
+    a, b = _range(start, end)
+    if b - a > timedelta(days=800):
+        return {"cmes": [], "note": "zoom in to ≤ 800 days to show CMEs"}
+    return {"cmes": cmes.cmes(a, b)}

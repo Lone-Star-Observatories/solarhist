@@ -465,6 +465,7 @@ async function load(start, end, { fromZoom = false } = {}) {
       (fl.error ? `<span class="busy">events: ${fl.error}</span>` : "");
     loadDaily(start, end, id);
     loadEffects(start, end, id);
+    loadCmes(start, end, id);
   } catch (e) {
     if (id === reqId) $("status").innerHTML = `<span class="busy">⚠ ${e.message}</span>`;
   } finally { if (id === reqId) stopPolling(); }
@@ -511,11 +512,13 @@ function draw(flux, flares, keepView) {
     xaxis: { type: "date", range: [iso(state.start), iso(state.end)], gridcolor: TH().grid, linecolor: TH().axis },
     yaxis: { type: "log", range: [-9, yTop], title: { text: skin === "lcars" ? "FLUX (W/m²)" : "Flux (W/m²)" }, gridcolor: TH().grid, exponentformat: "power",
       fixedrange: false },
+    yaxis3: { overlaying: "y", range: [0, 1], visible: false, fixedrange: true },
     yaxis2: { overlaying: "y", side: "right", type: "log", range: [-9, yTop], showgrid: false, fixedrange: true,
       tickvals: CLASSES.map(([, v]) => v * Math.sqrt(10)), ticktext: CLASSES.map(([c]) => c), tickfont: { size: 14, color: TH().classTick } },
     shapes: bandShapes().concat(selShape()),
   };
   traces.push({ x: [t[0] || iso(state.start)], y: [1e-9], yaxis: "y2", showlegend: false, hoverinfo: "skip", mode: "markers", marker: { opacity: 0 } });
+  traces.push(...cmeTraces());
   Plotly.react("chart", traces, layout, { displaylogo: false, responsive: true, scrollZoom: false,
     modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d"] });
 }
@@ -682,6 +685,107 @@ $("earthToggle").onclick = () => {
   if (!earthHidden) setTimeout(() => { try { Plotly.Plots.resize("earth"); } catch {} }, 50);
 };
 
+// ---- CMEs and the flare → CME → shock → storm chain (DONKI 2010 →, CDAW LASCO catalog before)
+let cmeList = [], cmeNote = null;
+const gLevel = kp => kp >= 9 ? "G5" : kp >= 8 ? "G4" : kp >= 7 ? "G3" : kp >= 6 ? "G2" : kp >= 5 ? "G1" : null;
+const G_NAMES = { G1: "Minor", G2: "Moderate", G3: "Strong", G4: "Severe", G5: "Extreme" };
+
+async function loadCmes(start, end, id) {
+  try {
+    const r = await getJSON(`/api/cmes?start=${iso(start)}&end=${iso(end)}`);
+    if (id !== reqId) return;
+    cmeList = r.cmes; cmeNote = r.note || null;
+    if (lastFlux) draw(lastFlux, flareRows);
+    if (impactFlare) { const f = impactFlare; impactFlare = null; showImpact(f); }
+  } catch { cmeList = []; }
+}
+
+function shownCmes() {
+  let list = cmeList.filter(c => { const t = Date.parse(c.time + "Z"); return t >= state.start && t <= state.end; });
+  const notable = c => (c.speed || 0) >= 700 || c.arrival || c.storm || c.type === "halo" || ["O", "R", "ER"].includes(c.type);
+  list = list.filter(notable);
+  if (list.length > 60) list = list.filter(c => (c.speed || 0) >= 1200 || c.storm);
+  return list;
+}
+
+function cmeTraces() {
+  const list = shownCmes();
+  if (!list.length) return [];
+  const lc = skin === "lcars", col = lc ? "#99ccff" : "#7fd1ff", shockCol = lc ? "#cc99cc" : "#e58cff";
+  const few = list.length <= 25;
+  const out = [{
+    x: list.map(c => c.time), y: list.map(() => 0.965), yaxis: "y3", mode: few ? "markers+text" : "markers", name: "CMEs",
+    text: list.map(c => (list.length <= 8 || (c.speed || 0) >= 1000) && c.speed ? `CME ${Math.round(c.speed)}` : ""), textposition: "middle right", textfont: { size: 10, color: col },
+    marker: { symbol: "diamond", size: list.map(c => 7 + Math.min(8, (c.speed || 300) / 300)), color: col, line: { color: "#000", width: 1 } },
+    hovertemplate: list.map(c => `<b>CME</b> ${fmt(c.time)} UTC<br>${c.speed ? Math.round(c.speed) + " km/s" : "speed n/a"}` +
+      `${c.type ? " · type " + c.type : ""}${c.source ? " · " + c.source : ""}${c.ar ? " · AR " + c.ar : ""}` +
+      `${c.arrival ? "<br>shock at Earth " + fmt(c.arrival) : ""}${c.storm ? `<br>${gLevel(c.storm.kp_max) || "storm"} Kp ${c.storm.kp_max}` : ""}` +
+      `<br><i>${c.catalog}</i><extra></extra>`),
+  }];
+  const withArr = list.filter(c => c.arrival);
+  if (withArr.length) {
+    const xs = [], ys = [];
+    withArr.forEach(c => { xs.push(c.time, c.arrival, null); ys.push(0.965, 0.89, null); });
+    out.push({ x: xs, y: ys, yaxis: "y3", mode: "lines", line: { color: shockCol, width: 1, dash: "dash" }, hoverinfo: "skip", showlegend: false });
+    const arr = [...new Map(withArr.map(c => [c.arrival, c])).values()];
+    out.push({ x: arr.map(c => c.arrival), y: arr.map(() => 0.89), yaxis: "y3", mode: "markers+text", name: "Shock at Earth",
+      text: arr.map(c => c.storm && gLevel(c.storm.kp_max) ? gLevel(c.storm.kp_max) : "shock"), textposition: "bottom center",
+      textfont: { size: 10, color: shockCol }, marker: { symbol: "triangle-down", size: 10, color: shockCol, line: { color: "#000", width: 1 } },
+      hovertemplate: arr.map(c => `<b>Shock at Earth</b> ${fmt(c.arrival)} UTC<br>from CME ${fmt(c.time)}` +
+        `${c.storm ? `<br>${gLevel(c.storm.kp_max) || ""} storm, Kp ${c.storm.kp_max}${c.storm.dst_min != null ? ", Dst " + c.storm.dst_min + " nT" : ""}` : ""}<extra></extra>`) });
+  }
+  return out;
+}
+
+function cmeForFlare(f) {
+  const peak = Date.parse(f.peak + "Z"), begin = Date.parse(f.begin + "Z");
+  const linked = cmeList.find(c => c.flares.some(x => x.peak && Math.abs(Date.parse(x.peak + "Z") - peak) <= 15 * 60e3 && x.cls && x.cls[0] === f.cls[0]));
+  if (linked) return { cme: linked, how: "linked in NASA DONKI" };
+  const near = cmeList.filter(c => c.catalog === "CDAW" || !c.flares.length).filter(c => {
+    const t = Date.parse(c.time + "Z"); return t >= begin - 30 * 60e3 && t <= peak + 90 * 60e3;
+  }).filter(c => (c.width || 0) >= 120 || c.type === "halo");
+  if (near.length) return { cme: near.reduce((a, b) => ((b.speed || 0) > (a.speed || 0) ? b : a)), how: "associated by timing only" };
+  return null;
+}
+
+function consequences(f) {
+  const hit = cmeForFlare(f);
+  if (!hit) {
+    const inData = cmeList.length || cmeNote;
+    return `<b>Consequences:</b> ${inData ? "no CME linked to this flare in the catalogs." : "CME data not loaded for this window."} ` +
+      "Energetic protons can still arrive 20 min to hours after a big flare.";
+  }
+  const c = hit.cme, t0 = Date.parse(c.time + "Z");
+  let s = `<b>Consequences:</b> CME ${c.speed ? Math.round(c.speed).toLocaleString() + " km/s" : ""}` +
+    `${c.type === "halo" ? " (halo)" : c.type ? ` (type ${c.type})` : ""} launched ${fmt(c.time)}`;
+  if (c.arrival) {
+    const h = (Date.parse(c.arrival + "Z") - t0) / 3600e3;
+    s += ` → shock arrived at Earth ${fmt(c.arrival)} (+${h.toFixed(0)} h)`;
+  } else if (c.catalog === "DONKI") s += " → no shock at Earth recorded";
+  if (c.storm) {
+    const g = gLevel(c.storm.kp_max);
+    s += ` → ${g ? `<span class="rs R${g[1]}">${g}</span> ${G_NAMES[g]} storm, ` : "storm, "}Kp ${c.storm.kp_max}` +
+      `${c.storm.dst_min != null ? `, Dst ${c.storm.dst_min} nT` : ""}`;
+  }
+  return s + ` <span class="sub">(${hit.how})</span>`;
+}
+
+// Approximate auroral-oval equatorward edge: ~66° − 2°·Kp magnetic latitude around the geomagnetic poles.
+function auroraRings(kp, year) {
+  const pLat = Math.min(80.9, 79.3 + 0.05 * (year - 1995)), pLon = -71.4 - 0.04 * (year - 1995);
+  const colat = (90 - (66 - 2 * kp)) * Math.PI / 180, d2r = Math.PI / 180, rings = [];
+  for (const [la, lo] of [[pLat, pLon], [-pLat, pLon + 180]]) {
+    const p1 = la * d2r, l1 = lo * d2r, lat = [], lon = [];
+    for (let b = 0; b <= 360; b += 4) {
+      const th = b * d2r, p2 = Math.asin(Math.sin(p1) * Math.cos(colat) + Math.cos(p1) * Math.sin(colat) * Math.cos(th));
+      const l2 = l1 + Math.atan2(Math.sin(th) * Math.sin(colat) * Math.cos(p1), Math.cos(colat) - Math.sin(p1) * Math.sin(p2));
+      lat.push(+(p2 / d2r).toFixed(2)); lon.push(+((((l2 / d2r) + 540) % 360) - 180).toFixed(2));
+    }
+    rings.push({ lat, lon });
+  }
+  return rings;
+}
+
 // ---- flare impact analysis
 const AU_M = 1.495978707e11, RE_M = 6.371e6, LIGHT_S_AU = 499.004784, KT_J = 4.184e12;
 const R_NAMES = { R1: "Minor", R2: "Moderate", R3: "Strong", R4: "Severe", R5: "Extreme" };
@@ -749,7 +853,7 @@ function showImpact(f) {
       haf0 > 0 ? `HF absorbed up to ≈ ${haf0.toFixed(0)} MHz at the subsolar point` : "no significant HF absorption"],
   ].filter(Boolean);
   $("impNums").innerHTML = nums.map(([k, v, n]) => `<div class="num"><div class="k">${k}</div><div class="v">${v}</div><div class="n">${n}</div></div>`).join("");
-  $("impLater").innerHTML = "<b>Later:</b> energetic protons can arrive 20 min to hours after the flare; a CME, if one launched, takes 1–3 days and causes geomagnetic storms at high latitudes.";
+  $("impLater").innerHTML = consequences(f);
   drawGlobe(f, peak);
 }
 
@@ -768,6 +872,15 @@ function hafRings(flux, ss) {
     out.push({ lat, lon, label: h + " MHz" });
   }
   return out;
+}
+
+function stormLayer(f) {
+  const hit = cmeForFlare(f);
+  if (!hit || !hit.cme.storm || !hit.cme.storm.kp_max) return [];
+  const kp = hit.cme.storm.kp_max, lc = skin === "lcars", year = new Date(Date.parse(f.peak + "Z")).getUTCFullYear();
+  return auroraRings(kp, year).map((r, i) => ({ type: "scattergeo", lat: r.lat, lon: r.lon, mode: "lines",
+    line: { color: lc ? "#99ffcc" : "#5dff9d", width: 2, dash: "dash" },
+    hovertemplate: `Approx. auroral oval edge for Kp ${kp} (${fmt(hit.cme.storm.start)}), ${66 - 2 * kp}° magnetic latitude<extra></extra>` }));
 }
 
 function drawGlobe(f, peak) {
@@ -789,6 +902,7 @@ function drawGlobe(f, peak) {
     ...hafRings(f.flux, ss).map(r => ({ type: "scattergeo", lat: r.lat, lon: r.lon, mode: "lines+text",
       text: r.lat.map((_, i) => i === 0 ? r.label : ""), textposition: "top center", textfont: { color: lc ? "#ffcc99" : "#ffe3b0", size: 10 },
       line: { color: lc ? "#ffcc99" : "rgba(255,227,176,.8)", width: 1 }, hoverinfo: "skip" })),
+    ...stormLayer(f),
     { type: "scattergeo", lat: [ss.lat], lon: [ss.lon], mode: "markers+text", text: ["max impact"], textposition: "top center",
       textfont: { color: lc ? "#ffcc99" : "#fff", size: 12 }, marker: { size: 14, symbol: "star", color: lc ? "#ffcc66" : "#ffd166", line: { color: "#000", width: 1 } },
       hovertemplate: `Subsolar point ${ss.lat.toFixed(1)}°, ${ss.lon.toFixed(1)}°<extra></extra>`, name: "subsolar" },
@@ -803,7 +917,8 @@ function drawGlobe(f, peak) {
   }, { displaylogo: false, responsive: true, topojsonURL: "/static/vendor/topojson/" });
   $("globeCap").innerHTML = `Dayside HF radio absorption at flare peak (NOAA D-RAP model: (10·log₁₀F + 65) MHz × cos<sup>0.75</sup>χ). ` +
     `★ subsolar point ${Math.abs(ss.lat).toFixed(1)}°${ss.lat >= 0 ? "N" : "S"}, ${Math.abs(ss.lon).toFixed(1)}°${ss.lon >= 0 ? "E" : "W"}. ` +
-    `X-rays are absorbed 60–100 km up and never reach the ground. Drag to rotate.`;
+    `X-rays are absorbed 60–100 km up and never reach the ground. Drag to rotate.` +
+    (stormLayer(f).length ? ` <span style="color:#5dff9d">- - -</span> approximate auroral oval edge during the linked storm (66° − 2°·Kp magnetic latitude), days later and on both day and night sides.` : "");
 }
 
 // ---- solar imagery at the selected time
