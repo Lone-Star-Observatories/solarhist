@@ -136,7 +136,7 @@ def images_at(t: datetime) -> list[dict]:
         if abs(delta) > gap:
             continue
         d = hit["date"].strftime("%Y-%m-%dT%H:%M:%S")
-        out.append({"key": key, "label": label, "group": group, "sourceId": sid, "date": d,
+        out.append({"key": key, "label": label, "group": group, "sourceId": sid, "date": d, "scale": scale,
                     "delta_min": round(delta, 1), "img": f"/api/img?key={key}&date={d}"})
     return out
 

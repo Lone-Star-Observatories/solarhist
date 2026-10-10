@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import cmes, core, images, omni
+from . import cmes, core, flareloc, images, omni
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 app = FastAPI(title="Solar X-ray History")
@@ -138,3 +138,8 @@ def cme_list(start: str, end: str):
     if b - a > timedelta(days=800):
         return {"cmes": [], "note": "zoom in to ≤ 800 days to show CMEs"}
     return {"cmes": cmes.cmes(a, b)}
+
+
+@app.get("/api/flareloc")
+def flare_location(peak: str, cls: str | None = None):
+    return {"loc": flareloc.locate(_parse(peak), cls)}

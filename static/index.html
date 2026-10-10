@@ -264,6 +264,15 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
 :root[data-skin=lcars] #earthcard h2 { color: var(--lc-tan); flex: 0 0 auto; }
 :root[data-skin=lcars] #earthcard h2::after { background: var(--lc-tan); flex: 0 0 60px; }
 :root[data-skin=lcars] #earthToggle { background: var(--lc-tan); }
+
+/* ---- flare location crosshair on images */
+.iw { position: relative; }
+.xh { position: absolute; width: 26%; aspect-ratio: 1; transform: translate(-50%, -50%); pointer-events: none; overflow: visible; }
+.xh circle, .xh line { stroke: #00ffd0; stroke-width: 2.2; fill: none; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 2px #000); }
+#lbWrap { position: relative; display: inline-block; line-height: 0; }
+#lbWrap .xh { width: 9%; }
+:root[data-skin=lcars] .xh circle, :root[data-skin=lcars] .xh line { stroke: var(--lc-gold); }
+#impLoc { color: var(--muted); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -314,7 +323,7 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
   </div>
   <div class="card" id="impact">
     <div class="head">
-      <h2 id="impH">Flare impact</h2><span id="impTitle"></span><span class="sub" id="impSub"></span>
+      <h2 id="impH">Flare impact</h2><span id="impTitle"></span><span class="sub" id="impSub"></span><span id="impLoc"></span>
     </div>
     <div class="lt">
       <div class="body">☀︎<small>Sun</small></div>
@@ -365,7 +374,7 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
 </main>
 <div id="lightbox">
   <div class="lbbar"><span id="lbTitle"></span><span id="lbTime"></span></div>
-  <img id="lbImg" alt="">
+  <div id="lbWrap"><img id="lbImg" alt=""><span id="lbXh"></span></div>
   <div class="lbbar">
     <button data-lb="-1">◀ prev</button>
     <button id="lbPlay">▶ play</button>
@@ -457,7 +466,7 @@ async function load(start, end, { fromZoom = false } = {}) {
     if (sel == null || sel < start || sel > end) { sel = peakTime(flux); selectTime(sel); }
     draw(flux, fl.flares, fromZoom);
     flareRows = fl.flares; renderFlares(); renderStats(); updateReadouts();
-    if (sel != null) showImpact(flareAt(sel));
+    if (sel != null) { showImpact(flareAt(sel)); updateFlareLoc(); }
     const sats = flux.sats.length ? "GOES-" + flux.sats.join(", GOES-") : "no flux data in this range";
     $("status").innerHTML = `<span>${sats}</span><span>${stepLabel(flux.step_min)}</span>` +
       `<span>${flux.t.length.toLocaleString()} points</span>` +
@@ -696,7 +705,7 @@ async function loadCmes(start, end, id) {
     if (id !== reqId) return;
     cmeList = r.cmes; cmeNote = r.note || null;
     if (lastFlux) draw(lastFlux, flareRows);
-    if (impactFlare) { const f = impactFlare; impactFlare = null; showImpact(f); }
+    if (impactFlare) { const f = impactFlare; impactFlare = null; showImpact(f); updateFlareLoc(); }
   } catch { cmeList = []; }
 }
 
@@ -941,6 +950,7 @@ async function selectTime(ms, flare = null) {
   sel = Math.round(ms / 60000) * 60000;
   updateReadouts();
   showImpact(flare || flareAt(sel));
+  updateFlareLoc();
   $("selTime").textContent = fmt(iso(sel)) + " UTC";
   relayoutSel();
   const id = ++imgReq;
@@ -967,7 +977,7 @@ function renderTiles() {
     html += `<div class="grp">${g}</div>`;
     for (const i of imgList.filter(i => i.group === g)) {
       html += `<div class="tile ${Math.abs(i.delta_min) > 15 ? "far" : ""}" data-k="${i.key}" title="${i.label} · ${fmt(i.date)} UTC">` +
-        `<img loading="lazy" src="${i.img}" alt="${i.label}"><div class="cap"><span>${i.label}</span><span>${deltaLabel(i.delta_min)}</span></div></div>`;
+        `<div class="iw"><img loading="lazy" src="${i.img}" alt="${i.label}">${crosshair(i)}</div><div class="cap"><span>${i.label}</span><span>${deltaLabel(i.delta_min)}</span></div></div>`;
     }
   }
   $("tiles").innerHTML = html || `<div class="hint">All sensor groups are hidden — click a chip above.</div>`;
@@ -991,6 +1001,36 @@ function peakTime(flux) {
   return bi >= 0 ? flux.t[bi] + (flux.step_min > 1 ? flux.step_min * 30000 : 0) : (state.start + state.end) / 2;
 }
 
+// ---- flare location on the solar images (HEK / DONKI, helioprojective arcsec as seen from Earth)
+const EARTH_VIEW = /^(aia|hmi|suvi|eit|mdi|swap|xrt|sxt|halpha|trace)/;   // not STEREO / SolO (other vantage points)
+const locCache = new Map();
+let flareLoc = null;
+
+async function updateFlareLoc() {
+  const f = impactFlare;
+  if (!f || Math.abs(Date.parse(f.peak + "Z") - sel) > 3 * 3600e3) { setFlareLoc(null); return; }
+  const key = f.peak + f.cls;
+  if (!locCache.has(key)) {
+    try { locCache.set(key, (await getJSON(`/api/flareloc?peak=${f.peak}&cls=${f.cls}`)).loc); }
+    catch { locCache.set(key, null); }
+  }
+  if (impactFlare === f) setFlareLoc(locCache.get(key));
+}
+function setFlareLoc(loc) {
+  const changed = JSON.stringify(loc) !== JSON.stringify(flareLoc);
+  flareLoc = loc;
+  $("impLoc").textContent = loc ? ` · location (${Math.round(loc.x)}″, ${Math.round(loc.y)}″) from ${loc.source}` : "";
+  if (changed && imgList.length) { renderTiles(); if (lbKey) $("lbXh").innerHTML = crosshair(imgList.find(x => x.key === lbKey) || {}); }
+}
+function crosshair(i) {
+  if (!flareLoc || !i.key || !EARTH_VIEW.test(i.key) || !i.scale) return "";
+  const fx = (256 + flareLoc.x / i.scale) / 512, fy = (256 - flareLoc.y / i.scale) / 512;
+  if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return "";
+  return `<svg class="xh" viewBox="-12 -12 24 24" style="left:${(fx * 100).toFixed(2)}%;top:${(fy * 100).toFixed(2)}%">` +
+    `<circle r="6"/><line x1="-12" y1="0" x2="-8" y2="0"/><line x1="8" y1="0" x2="12" y2="0"/>` +
+    `<line x1="0" y1="-12" x2="0" y2="-8"/><line x1="0" y1="8" x2="0" y2="12"/></svg>`;
+}
+
 // Lightbox with stepping / playback for one sensor
 function showLightbox(key) {
   lbKey = key;
@@ -1000,6 +1040,7 @@ function showLightbox(key) {
   $("lbTitle").textContent = i.label;
   $("lbTime").textContent = `${fmt(i.date)} UTC (${deltaLabel(i.delta_min)} from ${hm(iso(sel))})`;
   $("lbImg").src = i.img + "&size=1024";
+  $("lbXh").innerHTML = crosshair(i);
   $("lbLink").href = `https://helioviewer.org/?date=${i.date}Z`;
 }
 function closeLightbox() { $("lightbox").classList.remove("open"); lbKey = null; stopPlay(); }
