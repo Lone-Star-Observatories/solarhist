@@ -20,6 +20,13 @@ watching at the moment you click.
 - **Solar imagery at any moment.** Click anywhere on the chart to see images from every sensor imaging at that
   time: SDO AIA & HMI, GOES SUVI, SOHO EIT/MDI/LASCO, STEREO, PROBA2, Hinode, GONG, TRACE, Yohkoh and more.
   Enlarge any image and step or play through time.
+- **Flare impact card.** For any flare: when it happened at the Sun vs when its X-rays reached Earth, the
+  power and energy that hit Earth, the radio-blackout level, and a globe of where shortwave radio was
+  knocked out.
+- **Effects at Earth.** Solar wind, Kp, Dst and energetic protons on the same timeline as the X-rays.
+- **CME tracking.** Coronal mass ejections on the chart, linked to the shock that hit Earth and the
+  geomagnetic storm it caused.
+- **Flare location.** A crosshair marks where the flare happened on every Earth-view solar image.
 - **Daily summary.** Flare counts per day and F10.7 radio flux.
 - **CSV export** of the 1-minute data, and **bookmarkable views** (the time window is kept in the URL).
 - **LCARS skin.** One click turns the interface into a starship-style console.
@@ -87,6 +94,51 @@ at its peak.
 
 ![Zoomed on the X8.7 flare of 2024-05-14](docs/screenshots/flare-zoom.png)
 
+### Flare impact card
+
+![Flare impact card for the X2.2 flare of 2024-05-09](docs/screenshots/impact.png)
+
+Select a flare (click it in the list, or click the chart during a flare) to open its impact card:
+
+- **Light travel.** X-rays take 490–507 s to cross the 0.98–1.02 AU gap, so the flare happened about
+  8 m 20 s before GOES saw it. The card shows both times and the Sun–Earth distance on that date.
+- **Energy at Earth.** Peak power is the peak flux × Earth's cross-section (πR⊕²). Energy is SWPC's
+  integrated flux × πR⊕², shown in kilotons of TNT. Earth intercepts only about 4.5×10⁻¹⁰ of what the flare
+  radiates.
+- **Radio blackout.** The NOAA R-scale level (R1 at M1, R2 at M5, R3 at X1, R4 at X10, R5 at X20).
+- **Globe.** Centred on the subsolar point (where the Sun was overhead), coloured by NOAA's D-RAP estimate
+  of the highest HF frequency absorbed, (10·log₁₀F + 65) MHz × cos^0.75 of the solar zenith angle. X-rays
+  only affect the dayside and are absorbed 60–100 km up; they never reach the ground. If the flare's CME
+  caused a storm, a dashed line shows the approximate auroral-oval edge for that storm's peak Kp.
+- **Consequences.** The linked CME's speed → when its shock reached Earth → the storm's G level, Kp and Dst.
+
+### Effects at Earth
+
+![Effects at Earth during the May 2024 storm](docs/screenshots/earth-effects.png)
+
+Stacked under the X-ray chart on the same time axis, so zooming or clicking either one drives both:
+
+| Row | What it shows | Source |
+|---|---|---|
+| Speed / density | Solar-wind speed (km/s) and proton density (/cm³) | NASA OMNI (1-min for windows ≤ 20 days, hourly otherwise) + SWPC real-time |
+| Bz | Interplanetary magnetic field north–south component (nT, GSM). Strongly negative Bz drives storms | OMNI + SWPC real-time |
+| Kp | Planetary K index, 3-hourly bars coloured by NOAA G-scale (Kp 5 = G1 … 9 = G5) | OMNI + SWPC |
+| Dst | Ring-current storm index (nT). Lower means a stronger storm | OMNI + Kyoto via SWPC |
+| >10 MeV protons | Energetic proton flux (pfu) with S-scale guides (10 = S1 … 10⁵ = S5) | OMNI to early 2020; GOES-16+ SGPS after (computed from the differential channels, matching SWPC to ~5 %) |
+
+Notes: OMNI lags real time by about 10 days and SWPC's live solar-wind file covers only the last ~24 h, so
+there's a short solar-wind gap just before "now". Proton data from 2020 on is downloaded per month, so zoom
+in to ≤ 200 days to load it.
+
+### CMEs and what they caused
+
+![CMEs and shock arrivals on the X-ray chart, May 2024](docs/screenshots/cme-chain.png)
+
+Blue diamonds mark CME launches (bigger = faster). A dashed arrow runs to the shock's arrival at Earth,
+labelled with the storm level it produced. Hover a diamond for speed, type and source region. From 2010 the
+links come from NASA's DONKI database. Before 2010 CMEs come from the SOHO/LASCO CDAW catalog, and are matched
+to flares by timing only.
+
 ### Solar imagery
 
 Click anywhere on the chart, or on a flare, to choose a moment. A dotted line marks it on the chart, and the
@@ -102,6 +154,11 @@ imagery panel shows the closest image from every sensor that was operating then.
 - **Click a tile** to open it large. Use **◀ prev / next ▶** (or ← →) to step through time, and **▶ play**
   (or space) to animate it, with a step of 2 min to 1 h. **Open in Helioviewer** opens that moment in
   Helioviewer for deeper analysis.
+
+- When a flare is selected, a **crosshair** marks where it happened on every image taken from Earth's
+  point of view (SDO, GOES SUVI, SOHO, PROBA2, Hinode, GONG, TRACE, Yohkoh). STEREO and Solar Orbiter view
+  the Sun from elsewhere, so they don't get one. Locations come from the Heliophysics Event Knowledgebase
+  (HEK), with NASA DONKI as a fallback.
 
 ![Enlarged AIA 131 Å image at the flare peak](docs/screenshots/lightbox.png)
 
@@ -138,6 +195,8 @@ toggles the console chirps. Press **Standard** to switch back; the app remembers
 
 ![LCARS skin](docs/screenshots/lcars.png)
 
+![LCARS impact analysis](docs/screenshots/lcars-impact.png)
+
 <details>
 <summary>Full LCARS page</summary>
 
@@ -156,6 +215,12 @@ All sources are public and free. Nothing needs an account or key.
 | Flare event lists | NOAA SWPC Warehouse FTP `ftp.swpc.noaa.gov/pub/warehouse` (`YYYY_events`) | 1996 → today |
 | F10.7 / sunspot number | SWPC Warehouse `YYYY_DSD.txt` | 1996 → last full year |
 | Solar images | [Helioviewer API](https://api.helioviewer.org/docs/v2/) (`getClosestImage`, `takeScreenshot`) | 1991 → now |
+| Solar wind, Kp, Dst, protons | NASA [OMNI](https://omniweb.gsfc.nasa.gov/) via the [CDAWeb HAPI server](https://cdaweb.gsfc.nasa.gov/hapi) (`OMNI2_H0_MRG1HR`, `OMNI_HRO_1MIN`, `OMNI_HRO_5MIN`) | 1981 → ~10 days ago |
+| >10 MeV protons (2020 →) | NOAA NCEI GOES-16+ [SGPS](https://data.ngdc.noaa.gov/platforms/solar-space-observing-satellites/goes/goes16/l2/data/sgps-l2-avg5m/) 5-min files | 2020 → yesterday |
+| Real-time tail | NOAA SWPC `json/rtsw/*`, `products/noaa-planetary-k-index.json`, `products/kyoto-dst.json`, integral protons | last 1–7 days |
+| CMEs, shocks, storms | NASA CCMC [DONKI API](https://ccmc.gsfc.nasa.gov/tools/DONKI/) (`CME`, `FLR`, `IPS`, `GST`) | 2010 → |
+| CMEs before 2010 | [SOHO/LASCO CDAW CME catalog](https://cdaw.gsfc.nasa.gov/CME_list/) | 1996 → |
+| Flare locations | [Heliophysics Event Knowledgebase (HEK)](https://www.lmsal.com/hek/), DONKI fallback | 1996 → |
 
 **Auto satellite selection**: GOES-8 (1995–2003) → GOES-12 (2003–2007) → GOES-10 (2008–09) →
 GOES-15 (2010–2017) → GOES-16 (2017–2025) → GOES-19 (2025 →). If the primary has no data for a month,
@@ -189,6 +254,9 @@ The UI is a single static page on top of a small JSON API that you can also call
 | `GET /api/images?time=…` | Closest image per sensor near a time |
 | `GET /api/img?key=aia131&date=…&size=512` | Rendered PNG for one sensor (cached) |
 | `GET /api/export.csv?start=…&end=…&sat=auto` | 1-minute CSV |
+| `GET /api/effects?start=…&end=…` | Solar wind speed/density, Bz min/max, Kp, Dst, >10 MeV protons |
+| `GET /api/cmes?start=…&end=…` | CMEs with linked flares, shock arrival and storm (Kp, Dst) |
+| `GET /api/flareloc?peak=…&cls=X8.7` | Flare position in helioprojective arcsec |
 | `GET /api/status` | Download progress and cache size |
 
 Times are ISO 8601 in UTC, e.g. `2024-05-14T16:51:00`.
@@ -202,6 +270,9 @@ solarhist/
 ├── solarhist/
 │   ├── core.py          # NOAA flux fetch/cache/downsample, SWPC FTP events & daily data
 │   ├── images.py        # Helioviewer sensor catalogue, closest-image lookup, PNG cache
+│   ├── omni.py          # solar wind / Kp / Dst / protons (OMNI HAPI, GOES SGPS, SWPC real-time)
+│   ├── cmes.py          # DONKI CME→shock→storm chain, CDAW LASCO catalog
+│   ├── flareloc.py      # flare positions from HEK (DONKI fallback)
 │   └── server.py        # FastAPI app and JSON endpoints
 ├── static/
 │   ├── index.html       # the whole UI (Plotly charts, imagery panel, both skins)
@@ -213,6 +284,10 @@ solarhist/
 
 - X-ray data: **NOAA NCEI** and the **NOAA Space Weather Prediction Center**, from the GOES XRS and EXIS
   instruments.
+- Solar wind and geomagnetic indices from **NASA OMNI** (GSFC SPDF) and the **World Data Center for
+  Geomagnetism, Kyoto** (Dst); Kp from **GFZ Potsdam** via NOAA SWPC. CME, shock and storm links from
+  **NASA CCMC DONKI** and the **CDAW SOHO/LASCO CME catalog**. Flare locations from the **Heliophysics
+  Event Knowledgebase** (LMSAL).
 - Solar imagery via **[Helioviewer](https://helioviewer.org)** (ESA/NASA). Image data courtesy of the NASA
   SDO, ESA/NASA SOHO, NASA STEREO, ESA PROBA2, JAXA/NASA Hinode, NOAA GOES SUVI/CCOR, NSO GONG, NASA TRACE,
   ISAS Yohkoh and ESA/NASA Solar Orbiter teams.
