@@ -253,6 +253,17 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
 :root[data-skin=lcars] .num .v { color: var(--lc-orange); font-size: 24px; font-weight: 600; }
 :root[data-skin=lcars] .rs { color: #000 !important; background: var(--lc-red) !important; border-radius: 999px; }
 :root[data-skin=lcars] .rs.R1 { background: var(--lc-gold) !important; } :root[data-skin=lcars] .rs.R2 { background: var(--lc-orange) !important; }
+
+/* ---- effects at Earth */
+#earthcard .bar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 2px 8px 0; }
+#earthcard .bar h2 { margin: 0; }
+#earthNote { color: var(--muted); font-size: 12px; }
+#earth { height: 560px; }
+#earthcard.collapsed #earth { display: none; }
+:root[data-skin=lcars] #earthcard { border-left-color: var(--lc-tan); }
+:root[data-skin=lcars] #earthcard h2 { color: var(--lc-tan); flex: 0 0 auto; }
+:root[data-skin=lcars] #earthcard h2::after { background: var(--lc-tan); flex: 0 0 60px; }
+:root[data-skin=lcars] #earthToggle { background: var(--lc-tan); }
 </style>
 </head>
 <body>
@@ -297,6 +308,10 @@ h2 { font-size: 13px; font-weight: 600; margin: 4px 8px 8px; color: var(--muted)
 <main>
   <div id="status"></div>
   <div class="card"><div id="chart"></div></div>
+  <div class="card" id="earthcard">
+    <div class="bar"><h2>Effects at Earth</h2><span id="earthNote"></span><button id="earthToggle">Hide</button></div>
+    <div id="earth"></div>
+  </div>
   <div class="card" id="impact">
     <div class="head">
       <h2 id="impH">Flare impact</h2><span id="impTitle"></span><span class="sub" id="impSub"></span>
@@ -449,6 +464,7 @@ async function load(start, end, { fromZoom = false } = {}) {
       (flux.last ? `<span>data through ${fmt(flux.last)} UTC</span>` : "") +
       (fl.error ? `<span class="busy">events: ${fl.error}</span>` : "");
     loadDaily(start, end, id);
+    loadEffects(start, end, id);
   } catch (e) {
     if (id === reqId) $("status").innerHTML = `<span class="busy">⚠ ${e.message}</span>`;
   } finally { if (id === reqId) stopPolling(); }
@@ -582,6 +598,88 @@ $("flares").onclick = ev => {
 document.querySelector("thead").onclick = ev => {
   const k = ev.target.dataset.k; if (!k) return;
   sortDir = sortKey === k ? -sortDir : -1; sortKey = k; renderFlares();
+};
+
+// ---- effects at Earth (OMNI / GOES SGPS / SWPC)
+const G_COL = kp => kp >= 9 ? "#b0001e" : kp >= 8 ? "#ff3b3b" : kp >= 7 ? "#ff7a1a" : kp >= 6 ? "#ffb000" : kp >= 5 ? "#f0e040" : "#3fae6a";
+const G_COL_LC = kp => kp >= 9 ? "#cc4444" : kp >= 8 ? "#cc6666" : kp >= 7 ? "#ff9c00" : kp >= 6 ? "#ffcc66" : kp >= 5 ? "#ffcc99" : "#9999ff";
+let lastEffects = null, earthHidden = false;
+try { earthHidden = localStorage.getItem("earthHidden") === "1"; } catch {}
+
+async function loadEffects(start, end, id) {
+  $("earthcard").classList.toggle("collapsed", earthHidden);
+  $("earthToggle").textContent = earthHidden ? "Show" : "Hide";
+  if (earthHidden) return;
+  $("earthNote").textContent = "loading solar wind, Kp, Dst, protons…";
+  try {
+    const width = $("earth").clientWidth || 1200;
+    const e = await getJSON(`/api/effects?start=${iso(start)}&end=${iso(end)}&points=${Math.round(width * 1.2)}`);
+    if (id !== reqId) return;
+    lastEffects = e;
+    drawEffects(e);
+    $("earthNote").textContent = `Solar wind ${e.wind_res} (NASA OMNI + SWPC real-time) · Kp, Dst hourly · >10 MeV protons` +
+      (e.protons_note ? ` — ${e.protons_note}` : "");
+  } catch (err) {
+    if (id === reqId) $("earthNote").textContent = "⚠ " + err.message;
+  }
+}
+
+function drawEffects(e) {
+  const T = TH(), lc = skin === "lcars", x = a => a.t.map(iso);
+  const dom = [[0.80, 1], [0.60, 0.78], [0.40, 0.58], [0.20, 0.38], [0, 0.18]];
+  const ax = (i, extra) => Object.assign({ domain: dom[i], gridcolor: T.grid, zeroline: false, linecolor: T.axis,
+    titlefont: { size: 11 }, tickfont: { size: 10 } }, extra);
+  const kpCol = e.kp.y.map(lc ? G_COL_LC : G_COL);
+  const traces = [
+    { x: x(e.v), y: e.v.y, name: "Speed", yaxis: "y", mode: "lines", line: { color: lc ? "#ff9c00" : "#ffb547", width: 1.2 },
+      hovertemplate: "%{x|%Y-%m-%d %H:%M}<br>V %{y:.0f} km/s<extra></extra>" },
+    { x: x(e.n), y: e.n.y, name: "Density", yaxis: "y6", mode: "lines", line: { color: lc ? "rgba(153,153,255,.55)" : "rgba(90,169,255,.4)", width: 1 },
+      hovertemplate: "n %{y:.1f} /cm³<extra></extra>" },
+    { x: x(e.bz_max), y: e.bz_max.y, name: "Bz max", yaxis: "y2", mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false },
+    { x: x(e.bz_min), y: e.bz_min.y, name: "Bz", yaxis: "y2", mode: "lines", fill: "tonexty",
+      fillcolor: lc ? "rgba(204,153,204,.35)" : "rgba(180,140,255,.3)", line: { color: lc ? "#cc99cc" : "#b48cff", width: 1 },
+      hovertemplate: "Bz min %{y:.1f} nT<extra></extra>" },
+    { x: x(e.kp), y: e.kp.y, name: "Kp", yaxis: "y3", type: "bar", marker: { color: kpCol }, width: 3 * 3600e3 * 0.9,
+      hovertemplate: "%{x|%Y-%m-%d %H:%M}<br>Kp %{y:.2f}<extra></extra>" },
+    { x: x(e.dst), y: e.dst.y, name: "Dst", yaxis: "y4", mode: "lines", line: { color: lc ? "#ffcc99" : "#7fd1b9", width: 1.3 },
+      hovertemplate: "Dst %{y:.0f} nT<extra></extra>" },
+    { x: x(e.p10), y: e.p10.y, name: ">10 MeV p⁺", yaxis: "y5", mode: "lines", line: { color: lc ? "#cc6666" : "#ff6b8b", width: 1.2 },
+      hovertemplate: ">10 MeV %{y:.3g} pfu<extra></extra>" },
+  ];
+  const shapes = [];
+  // G-scale guides on Kp (5..9) and S-scale guides on protons (10..1e5 pfu)
+  [5, 6, 7, 8, 9].forEach((k, i) => shapes.push({ type: "line", xref: "paper", x0: 0, x1: 1, yref: "y3", y0: k, y1: k,
+    line: { color: (lc ? G_COL_LC : G_COL)(k), width: 1, dash: "dot" }, layer: "below" }));
+  [1, 2, 3, 4, 5].forEach(i => shapes.push({ type: "line", xref: "paper", x0: 0, x1: 1, yref: "y5", y0: 10 ** i, y1: 10 ** i,
+    line: { color: lc ? "#cc6666" : "rgba(255,107,139,.45)", width: 1, dash: "dot" }, layer: "below" }));
+  shapes.push({ type: "line", xref: "paper", x0: 0, x1: 1, yref: "y2", y0: 0, y1: 0, line: { color: T.axis, width: 1 } });
+  shapes.push(...selShape());
+  const ann = [["G1", 5], ["G3", 7], ["G5", 9]].map(([t, k]) => ({ xref: "paper", x: 1.005, yref: "y3", y: k, text: t, showarrow: false,
+    xanchor: "left", font: { size: 9, color: (lc ? G_COL_LC : G_COL)(k) } }))
+    .concat([1, 3, 5].map(i => ({ xref: "paper", x: 1.005, yref: "y5", y: i, text: "S" + i, showarrow: false, xanchor: "left",
+      font: { size: 9, color: lc ? "#cc6666" : "#ff6b8b" } })));
+  const dstMin = Math.min(-50, ...e.dst.y.filter(v => v != null)) * 1.1;
+  const pMax = Math.max(1, ...e.p10.y.filter(v => v != null));
+  Plotly.react("earth", traces, {
+    paper_bgcolor: T.paper, plot_bgcolor: T.plot, font: { color: T.font, family: T.family, size: 11 },
+    margin: { l: 70, r: 70, t: 8, b: 30 }, showlegend: false, hovermode: "x", dragmode: "zoom", bargap: 0,
+    hoverlabel: lc ? { bgcolor: "#000", bordercolor: "#ff9c00", font: { family: T.family, color: "#ffcc99" } } : {},
+    xaxis: { type: "date", range: [iso(state.start), iso(state.end)], anchor: "y5", gridcolor: T.grid, linecolor: T.axis },
+    yaxis: ax(0, { title: { text: "V km/s" } }),
+    yaxis6: { overlaying: "y", side: "right", title: { text: "n /cm³", font: { size: 10 } }, showgrid: false, tickfont: { size: 9 }, rangemode: "tozero" },
+    yaxis2: ax(1, { title: { text: "Bz nT" } }),
+    yaxis3: ax(2, { title: { text: "Kp" }, range: [0, 9.5], dtick: 3 }),
+    yaxis4: ax(3, { title: { text: "Dst nT" }, range: [dstMin, 60] }),
+    yaxis5: ax(4, { title: { text: "p⁺ pfu" }, type: "log", range: [-1, Math.max(2.3, Math.log10(pMax) + 0.3)], dtick: 1, exponentformat: "power" }),
+    shapes, annotations: ann,
+  }, { displaylogo: false, responsive: true, modeBarButtonsToRemove: ["select2d", "lasso2d", "autoScale2d"] });
+}
+
+$("earthToggle").onclick = () => {
+  earthHidden = !earthHidden;
+  try { localStorage.setItem("earthHidden", earthHidden ? "1" : "0"); } catch {}
+  loadEffects(state.start, state.end, reqId);
+  if (!earthHidden) setTimeout(() => { try { Plotly.Plots.resize("earth"); } catch {} }, 50);
 };
 
 // ---- flare impact analysis
@@ -720,6 +818,7 @@ function selShape() {
 function relayoutSel() {
   const c = $("chart");
   if (c.layout && c.data && c.data.length) Plotly.relayout("chart", { shapes: bandShapes().concat(selShape()) });
+  if (lastEffects && !earthHidden && $("earth").data) drawEffects(lastEffects);
 }
 const deltaLabel = m => Math.abs(m) < 1 ? "<1 min" : (m > 0 ? "+" : "−") + (Math.abs(m) >= 90 ? (Math.abs(m) / 60).toFixed(1) + " h" : Math.round(Math.abs(m)) + " min");
 
@@ -878,23 +977,23 @@ function updateReadouts() {
   $("lcCount").textContent = $("nX").textContent + "·" + $("nM").textContent + "·" + $("nC").textContent;
 }
 
-// Zoom/pan on the chart → refetch at full resolution for the new window.
-function hookRelayout() {
-  $("chart").on("plotly_relayout", e => {
+// Zoom/pan on either chart → refetch at full resolution for the new window; click → select a time.
+function hookChart(id) {
+  const gd = $(id);
+  gd.on("plotly_relayout", e => {
     let s, en;
     if (e["xaxis.range[0]"]) { s = e["xaxis.range[0]"]; en = e["xaxis.range[1]"]; }
     else if (e["xaxis.range"]) { [s, en] = e["xaxis.range"]; }
-    else if (e["xaxis.autorange"]) return;  // double-click handled below
-    else return;
+    else return;                              // autorange (double-click) handled below; shape updates ignored
     const toMs = v => Date.parse(String(v).replace(" ", "T") + (String(v).includes("Z") ? "" : "Z"));
     clearTimeout(relayoutTimer);
     relayoutTimer = setTimeout(() => load(toMs(s), toMs(en), { fromZoom: true }), 250);
   });
-  $("chart").on("plotly_click", e => {
+  gd.on("plotly_click", e => {
     const x = e.points && e.points[0] && e.points[0].x; if (!x) return;
     selectTime(Date.parse(String(x).replace(" ", "T") + (String(x).includes("Z") ? "" : "Z")));
   });
-  $("chart").on("plotly_doubleclick", () => {
+  gd.on("plotly_doubleclick", () => {
     const span = state.end - state.start, mid = state.start + span / 2;
     load(mid - span * 2, Math.min(Date.now(), mid + span * 2));
     return false;
@@ -909,7 +1008,8 @@ function hookRelayout() {
   if (p.get("sat")) $("sat").value = p.get("sat");
   const r = readUrl();
   const end = Date.now();
-  Plotly.newPlot("chart", [], {}, { responsive: true }).then(hookRelayout);
+  Plotly.newPlot("chart", [], {}, { responsive: true }).then(() => hookChart("chart"));
+  Plotly.newPlot("earth", [], {}, { responsive: true }).then(() => hookChart("earth"));
   load(...(r || [end - 30 * 864e5, end]));
   window.addEventListener("hashchange", () => {
     const r = readUrl();

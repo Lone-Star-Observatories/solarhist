@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import core, images
+from . import core, images, omni
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 app = FastAPI(title="Solar X-ray History")
@@ -124,3 +124,9 @@ def img(key: str, date: str, size: int = 512):
     except Exception as e:
         raise HTTPException(502, f"Helioviewer: {e}")
     return Response(png, media_type="image/png", headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
+@app.get("/api/effects")
+def effects(start: str, end: str, points: int = Query(1500, ge=100, le=10000)):
+    a, b = _range(start, end)
+    return omni.effects(a, b, points)

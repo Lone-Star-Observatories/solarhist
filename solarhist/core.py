@@ -342,11 +342,11 @@ def downsample(df: pd.DataFrame, start: datetime, end: datetime, points: int) ->
     if df.empty:
         return {"t": [], "b": [], "a": [], "bmin": [], "step_min": step}
     if step == 1:
-        t = df.index.astype("int64") // 10**6
+        t = pd.DatetimeIndex(df.index).as_unit("ms").asi8
         return {"t": t.tolist(), "b": _clean(df["b"]), "a": _clean(df["a"]), "bmin": None, "step_min": 1}
     g = df.resample(f"{step}min", origin=pd.Timestamp(start))
     agg = pd.DataFrame({"b": g["b"].max(), "a": g["a"].max(), "bmin": g["b"].min()})
-    t = agg.index.astype("int64") // 10**6
+    t = pd.DatetimeIndex(agg.index).as_unit("ms").asi8
     return {"t": t.tolist(), "b": _clean(agg["b"]), "a": _clean(agg["a"]),
             "bmin": _clean(agg["bmin"]), "step_min": step}
 
